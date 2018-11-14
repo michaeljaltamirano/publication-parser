@@ -12,7 +12,7 @@
     "url": "git+https://github.com/mjaltamirano/lrb-parser.git"
   },
   "author": "Michael J. Altamirano",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/mjaltamirano/lrb-parser/issues"
   },
