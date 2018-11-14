@@ -1,4 +1,4 @@
-# lrb-parser
+# London Review of Books Issue Parser
 
 Inspired by thoughts I've had for a while of automating the importing of articles to one of my favorite applications, Voice Dream Reader, I sought out a way to pull the article contents of an entire issue of the London Review of Books from just the table of contents.
 
