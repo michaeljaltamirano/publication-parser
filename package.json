@@ -1,0 +1,29 @@
+{
+  "name": "lrb-parser",
+  "version": "1.0.0",
+  "description": "Parses the written content of LRB articles",
+  "main": "index.js",
+  "scripts": {
+    "prettier": "prettier",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjaltamirano/lrb-parser.git"
+  },
+  "author": "Michael J. Altamirano",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mjaltamirano/lrb-parser/issues"
+  },
+  "homepage": "https://github.com/mjaltamirano/lrb-parser#readme",
+  "dependencies": {
+    "jsdom": "^13.0.0",
+    "node-fetch": "^2.2.1",
+    "request": "^2.88.0",
+    "unfluff": "^3.2.0"
+  },
+  "devDependencies": {
+    "prettier": "^1.15.2"
+  }
+}
