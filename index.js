@@ -35,6 +35,7 @@ async function processHrefs(hrefs, options) {
 
   for (const item of hrefs) {
     // Get articles
+    console.log(`Fetching ${baseUrl}${item}...`);
     await fetchContent(`${baseUrl}${item}`, options)
       .then(result => {
         const firstSplit = result.split('<div id="main">');
@@ -99,13 +100,13 @@ async function processHrefs(hrefs, options) {
         }
 
         // Not sure yet what other cases there are;
-        return "";
+        return;
       })
       .catch(err => console.log(err));
   }
 
   fs.writeFile(
-    `The London Review of Books - ${volumeNumberAndDate}.txt`,
+    `output/The London Review of Books - ${volumeNumberAndDate}.html`,
     dom.window.document.body.innerText,
     err => {
       if (err) throw err;
@@ -143,8 +144,10 @@ rl.question(
         result.split('<p class="issue-link">')[1].split("</p>")[0]
       }</p>`;
 
+      const contents = issueUrl.split(baseUrl)[1];
+
       volumeNumberAndDate = getVolumeNumberAndDate
-        .split('<a id="current-issue-link" href="/v40/n20/contents">')[1]
+        .split(`<a id="current-issue-link" href="${contents}">`)[1]
         .split("</a>")[0];
 
       const links = tableOfContentsDom.window.document.querySelectorAll(
