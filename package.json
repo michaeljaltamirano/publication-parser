@@ -19,9 +19,7 @@
   "homepage": "https://github.com/mjaltamirano/lrb-parser#readme",
   "dependencies": {
     "jsdom": "^13.0.0",
-    "node-fetch": "^2.2.1",
-    "request": "^2.88.0",
-    "unfluff": "^3.2.0"
+    "node-fetch": "^2.2.1"
   },
   "devDependencies": {
     "prettier": "^1.15.2"
