@@ -1,3 +1,2 @@
 output/
-output/*
-output
+env.js
