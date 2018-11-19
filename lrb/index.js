@@ -13,7 +13,7 @@ const { lrbCookie: cookie } = ENV;
 
 async function processHrefs(hrefs, options) {
   const dom = new JSDOM(`<!DOCTYPE html>`);
-  dom.window.document.body.innerText = `<h1>The London Review of Books, ${volumeNumberAndDate}</h1>`;
+  dom.window.document.body.innerHTML = `<h1>The London Review of Books, ${volumeNumberAndDate}</h1>`;
 
   for (const item of hrefs) {
     // Get articles
@@ -44,14 +44,14 @@ async function processHrefs(hrefs, options) {
             .querySelectorAll("div.print-show")
             .forEach(printDiv => (printDiv.innerHTML = ""));
 
-          return (dom.window.document.body.innerText = `${
-            dom.window.document.body.innerText
+          return (dom.window.document.body.innerHTML = `${
+            dom.window.document.body.innerHTML
           }<div class="NEW-ARTICLE">${
             article.innerHTML
           }</div><br>End Article<br>`);
         } else if (letters) {
-          return (dom.window.document.body.innerText = `${
-            dom.window.document.body.innerText
+          return (dom.window.document.body.innerHTML = `${
+            dom.window.document.body.innerHTML
           }<div class="LETTERS"><h1 class="indent">Letters</h1>${
             letters.innerHTML
           }</div><br>End Letters<br>`);
@@ -65,7 +65,7 @@ async function processHrefs(hrefs, options) {
 
   fs.writeFile(
     `output/lrb/The London Review of Books - ${volumeNumberAndDate}.html`,
-    dom.window.document.body.innerText,
+    dom.window.document.body.innerHTML,
     err => {
       if (err) throw err;
     }

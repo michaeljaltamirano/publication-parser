@@ -1,4 +1,3 @@
-const fetch = require("node-fetch");
 const fs = require("fs");
 const jsdom = require("jsdom");
 const ENV = require("../env");
@@ -30,15 +29,15 @@ async function processHrefs(hrefs, options) {
         const header = article.querySelector("header");
         const body = article.querySelector("section.article_body");
 
-        return (dom.window.document.body.innerText = `${
-          dom.window.document.body.innerText
+        return (dom.window.document.body.innerHTML = `${
+          dom.window.document.body.innerHTML
         }<div class="NEW-ARTICLE">${header.innerHTML}${body.innerHTML}</div>`);
       })
       .catch(err => console.log(err));
   }
 
   fs.writeFile(
-    `output/The New York Review of Books - ${volumeNumberAndDate}.html`,
+    `output/nyrb/The New York Review of Books - ${volumeNumberAndDate}.html`,
     dom.window.document.body.innerHTML,
     err => {
       if (err) throw err;
