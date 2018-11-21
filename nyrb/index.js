@@ -8,7 +8,7 @@ const { fetchContent } = UTILS;
 const baseUrl = "https://www.nybooks.com";
 let volumeNumberAndDate;
 
-// const cookie = "wordpress_logged_in_XXX=michaeljaltamirano%40gmail.com%XXX";
+// const cookie = "wordpress_logged_in_XXX=XXX";
 const { nyrbCookie: cookie } = ENV;
 
 async function processHrefs(hrefs, options) {

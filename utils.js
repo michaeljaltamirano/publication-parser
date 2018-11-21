@@ -6,6 +6,21 @@ function fetchContent(url, options) {
     .catch(err => console.log("err", err));
 }
 
+function getOptions(cookie, issueUrl) {
+  return {
+    credentials: "include",
+    headers: {
+      cookie
+    },
+    referrer: issueUrl,
+    referrerPolicy: "no-referrer-when-downgrade",
+    body: null,
+    method: "GET",
+    mode: "cors"
+  };
+}
+
 module.exports = {
-  fetchContent
+  fetchContent,
+  getOptions
 };

@@ -16,7 +16,6 @@ function getPublicationParser(publicationName) {
     case "nyrb":
       return nyrbParser;
     case "harper's":
-      return harpersParser;
     case "harpers":
       return harpersParser;
     default:
@@ -31,16 +30,15 @@ function getExampleUrl(publicationName) {
     case "nyrb":
       return "https://www.nybooks.com/issues/2018/12/06/";
     case "harper's":
-      return "";
     case "harpers":
-      return "";
+      return "https://harpers.org/archive/2018/12/";
     default:
       throw new Error("Publication not found");
   }
 }
 
 rl.question(
-  "Please enter the Publication you would like to scrape (e.g. LRB/NYRB): ",
+  "Please enter the Publication you would like to scrape (e.g. LRB/NYRB/Harper's): ",
   pubName => {
     const publicationName = pubName.toLowerCase();
     const exampleUrl = getExampleUrl(publicationName);
