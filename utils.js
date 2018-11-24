@@ -24,12 +24,10 @@ function fetchContentArrayBuffer(url, options) {
     .catch(err => console.log("err", err));
 }
 
-function getOptions(cookie, issueUrl) {
+function getOptions({ headers, issueUrl }) {
   return {
     credentials: "include",
-    headers: {
-      cookie
-    },
+    headers,
     referrer: issueUrl,
     referrerPolicy: "no-referrer-when-downgrade",
     body: null,
