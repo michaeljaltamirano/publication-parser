@@ -1,7 +1,7 @@
 {
-  "name": "lrb-parser",
+  "name": "magazine-parser",
   "version": "1.0.0",
-  "description": "Parses the written content of LRB articles",
+  "description": "Parses the written content of various publications",
   "main": "index.js",
   "scripts": {
     "prettier": "prettier",
@@ -9,14 +9,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mjaltamirano/lrb-parser.git"
+    "url": "git+https://github.com/mjaltamirano/magazine-parser.git"
   },
   "author": "Michael J. Altamirano",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mjaltamirano/lrb-parser/issues"
+    "url": "https://github.com/mjaltamirano/magazine-parser/issues"
   },
-  "homepage": "https://github.com/mjaltamirano/lrb-parser#readme",
+  "homepage": "https://github.com/mjaltamirano/magazine-parser#readme",
   "dependencies": {
     "jsdom": "^13.0.0",
     "node-fetch": "^2.2.1"
