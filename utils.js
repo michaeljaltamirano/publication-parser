@@ -6,6 +6,24 @@ function fetchContent(url, options) {
     .catch(err => console.log("err", err));
 }
 
+function fetchContentArrayBuffer(url, options) {
+  return fetch(url, options)
+    .then(res => {
+      const contentType = options.headers["Content-Type"];
+      const charset = contentType.substring(
+        contentType.indexOf("charset=") + 8
+      );
+
+      return res.arrayBuffer().then(ab => {
+        const dataView = new DataView(ab);
+        const decoder = new TextDecoder(charset);
+
+        return decoder.decode(dataView);
+      });
+    })
+    .catch(err => console.log("err", err));
+}
+
 function getOptions(cookie, issueUrl) {
   return {
     credentials: "include",
@@ -22,5 +40,6 @@ function getOptions(cookie, issueUrl) {
 
 module.exports = {
   fetchContent,
-  getOptions
+  getOptions,
+  fetchContentArrayBuffer
 };
