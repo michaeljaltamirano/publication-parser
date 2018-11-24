@@ -6,12 +6,28 @@ function fetchContent(url, options) {
     .catch(err => console.log("err", err));
 }
 
-function getOptions(cookie, issueUrl) {
+function fetchContentArrayBuffer(url, options) {
+  return fetch(url, options)
+    .then(res => {
+      const contentType = options.headers["Content-Type"];
+      const charset = contentType.substring(
+        contentType.indexOf("charset=") + 8
+      );
+
+      return res.arrayBuffer().then(ab => {
+        const dataView = new DataView(ab);
+        const decoder = new TextDecoder(charset);
+
+        return decoder.decode(dataView);
+      });
+    })
+    .catch(err => console.log("err", err));
+}
+
+function getOptions({ headers, issueUrl }) {
   return {
     credentials: "include",
-    headers: {
-      cookie
-    },
+    headers,
     referrer: issueUrl,
     referrerPolicy: "no-referrer-when-downgrade",
     body: null,
@@ -22,5 +38,6 @@ function getOptions(cookie, issueUrl) {
 
 module.exports = {
   fetchContent,
-  getOptions
+  getOptions,
+  fetchContentArrayBuffer
 };

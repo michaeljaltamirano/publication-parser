@@ -50,7 +50,11 @@ async function processHrefs(hrefs, options) {
 }
 
 async function harpersParser(issueUrl) {
-  const options = getOptions(cookie, issueUrl);
+  const headers = {
+    cookie
+  };
+
+  const options = getOptions({ headers, issueUrl });
 
   // Get list of articles from the Table of Contents
   fetchContent(issueUrl, options).then(result => {

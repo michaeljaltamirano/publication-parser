@@ -3,7 +3,7 @@ const jsdom = require("jsdom");
 const ENV = require("../env");
 const UTILS = require("../utils");
 const { JSDOM } = jsdom;
-const { fetchContent } = UTILS;
+const { fetchContent, getOptions } = UTILS;
 
 const baseUrl = "https://www.lrb.co.uk";
 let volumeNumberAndDate;
@@ -75,17 +75,11 @@ async function processHrefs(hrefs, options) {
 }
 
 async function lrbParser(issueUrl) {
-  const options = {
-    credentials: "include",
-    headers: {
-      cookie
-    },
-    referrer: issueUrl,
-    referrerPolicy: "no-referrer-when-downgrade",
-    body: null,
-    method: "GET",
-    mode: "cors"
+  const headers = {
+    cookie
   };
+
+  const options = getOptions({ headers, issueUrl });
 
   // Get list of articles
   fetchContent(issueUrl, options).then(result => {
