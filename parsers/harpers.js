@@ -1,7 +1,7 @@
-const fs = require("fs");
-const jsdom = require("jsdom");
-const ENV = require("../env");
-const UTILS = require("../utils");
+const fs = require('fs');
+const jsdom = require('jsdom');
+const ENV = require('../env');
+const UTILS = require('../utils');
 const { JSDOM } = jsdom;
 const { fetchContent, getOptions, throwCookieError, handleError } = UTILS;
 
@@ -23,31 +23,31 @@ async function processHrefs(hrefs, options) {
         const articleDom = new JSDOM(result);
 
         const paywall = articleDom.window.document.getElementById(
-          "leaky_paywall_message"
+          'leaky_paywall_message'
         );
 
         if (paywall) throwCookieError();
 
         const issueArticle = articleDom.window.document.getElementById(
-          "issueArticle"
+          'issueArticle'
         );
 
-        const pdfOnly = issueArticle.querySelector(".highLightBox");
+        const pdfOnly = issueArticle.querySelector('.highLightBox');
 
         if (pdfOnly) {
           const start = pdfOnly.outerHTML.indexOf(
-            "https://archive.harpers.org/"
+            'https://archive.harpers.org/'
           );
-          const end = pdfOnly.outerHTML.indexOf(">PDF<") - 1;
-          const title = issueArticle.querySelector("h1").textContent;
+          const end = pdfOnly.outerHTML.indexOf('>PDF<') - 1;
+          const title = issueArticle.querySelector('h1').textContent;
           const path = pdfOnly.outerHTML.substring(start, end);
 
           // Attachment formatting for Nodemailer
-          pdfs.push({ path, title, contentType: "application/pdf" });
+          pdfs.push({ path, title, contentType: 'application/pdf' });
         } else {
-          const post = issueArticle.querySelector(".post");
-          const articlePost = issueArticle.querySelector(".articlePost");
-          const bio = issueArticle.querySelector(".COA_roles_fix");
+          const post = issueArticle.querySelector('.post');
+          const articlePost = issueArticle.querySelector('.articlePost');
+          const bio = issueArticle.querySelector('.COA_roles_fix');
 
           return (dom.window.document.body.innerHTML = `${
             dom.window.document.body.innerHTML
@@ -67,19 +67,19 @@ async function processHrefs(hrefs, options) {
     }
   );
 
-  console.log("Fetching complete!");
+  console.log('Fetching complete!');
 
   return {
     html: dom.window.document.body.innerHTML,
     volumeNumberAndDate,
     publicationName,
-    pdfs
+    pdfs,
   };
 }
 
 async function harpersParser(issueUrl) {
   const headers = {
-    cookie
+    cookie,
   };
 
   const options = getOptions({ headers, issueUrl });
@@ -87,18 +87,18 @@ async function harpersParser(issueUrl) {
   // Get list of articles from the Table of Contents
   return fetchContent(issueUrl, options).then(result => {
     const dom = new JSDOM(result);
-    const issueContent = dom.window.document.getElementById("issueContent");
-    const issues = issueContent.querySelectorAll(".Issue");
+    const issueContent = dom.window.document.getElementById('issueContent');
+    const issues = issueContent.querySelectorAll('.Issue');
 
     let hrefs = [];
 
     issues.forEach(article => {
-      const h2s = article.querySelectorAll("h2");
+      const h2s = article.querySelectorAll('h2');
 
-      h2s.forEach(h2 => hrefs.push(h2.querySelector("a").href));
+      h2s.forEach(h2 => hrefs.push(h2.querySelector('a').href));
     });
 
-    volumeNumberAndDate = dom.window.document.querySelector("h1").innerHTML;
+    volumeNumberAndDate = dom.window.document.querySelector('h1').innerHTML;
 
     return processHrefs(hrefs, options);
   });

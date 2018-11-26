@@ -1,17 +1,17 @@
-const fetch = require("node-fetch");
+const fetch = require('node-fetch');
 
 function fetchContent(url, options) {
   return fetch(url, options)
     .then(res => res.text())
-    .catch(err => console.log("err", err));
+    .catch(err => console.log('err', err));
 }
 
 function fetchContentArrayBuffer(url, options) {
   return fetch(url, options)
     .then(res => {
-      const contentType = options.headers["Content-Type"];
+      const contentType = options.headers['Content-Type'];
       const charset = contentType.substring(
-        contentType.indexOf("charset=") + 8
+        contentType.indexOf('charset=') + 8
       );
 
       return res.arrayBuffer().then(ab => {
@@ -21,24 +21,24 @@ function fetchContentArrayBuffer(url, options) {
         return decoder.decode(dataView);
       });
     })
-    .catch(err => console.log("err", err));
+    .catch(err => console.log('err', err));
 }
 
 function getOptions({ headers, issueUrl }) {
   return {
-    credentials: "include",
+    credentials: 'include',
     headers,
     referrer: issueUrl,
-    referrerPolicy: "no-referrer-when-downgrade",
+    referrerPolicy: 'no-referrer-when-downgrade',
     body: null,
-    method: "GET",
-    mode: "cors"
+    method: 'GET',
+    mode: 'cors',
   };
 }
 
 function throwCookieError() {
   throw new Error(
-    "\033[31mYOUR COOKIES HAVE EXPIRED! Please reset them to get the full article content"
+    '\033[31mYOUR COOKIES HAVE EXPIRED! Please reset them to get the full article content'
   );
 }
 
@@ -52,5 +52,5 @@ module.exports = {
   getOptions,
   fetchContentArrayBuffer,
   throwCookieError,
-  handleError
+  handleError,
 };

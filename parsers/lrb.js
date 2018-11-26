@@ -1,13 +1,13 @@
-const fs = require("fs");
-const jsdom = require("jsdom");
-const ENV = require("../env");
-const UTILS = require("../utils");
+const fs = require('fs');
+const jsdom = require('jsdom');
+const ENV = require('../env');
+const UTILS = require('../utils');
 const { JSDOM } = jsdom;
 const { fetchContent, getOptions, throwCookieError, handleError } = UTILS;
 
-const baseUrl = "https://www.lrb.co.uk";
+const baseUrl = 'https://www.lrb.co.uk';
 let volumeNumberAndDate;
-const publicationName = "The London Review of Books";
+const publicationName = 'The London Review of Books';
 // const cookie = "lrb-session=XXX; lrb-remember-me=XXX;";
 const { lrbCookie: cookie } = ENV;
 
@@ -25,33 +25,33 @@ async function processHrefs(hrefs, options) {
         articleDom.window.document.body.innerHTML = result;
 
         const subscriberOnly = articleDom.window.document.getElementById(
-          "subscriber-only"
+          'subscriber-only'
         );
 
         const isPaywalled =
-          subscriberOnly && subscriberOnly.style.display !== "none";
+          subscriberOnly && subscriberOnly.style.display !== 'none';
 
         if (isPaywalled) throwCookieError();
 
-        const main = articleDom.window.document.getElementById("main");
-        const article = main.querySelector("div.article-body");
-        const letters = main.querySelector("div.letters");
+        const main = articleDom.window.document.getElementById('main');
+        const article = main.querySelector('div.article-body');
+        const letters = main.querySelector('div.letters');
 
         if (article) {
           // Clean script tags
           article
-            .querySelectorAll("script")
-            .forEach(script => (script.innerHTML = ""));
+            .querySelectorAll('script')
+            .forEach(script => (script.innerHTML = ''));
 
           // Clean ads
           article
-            .querySelectorAll("div.revive-midpage")
-            .forEach(adDiv => (adDiv.innerHTML = ""));
+            .querySelectorAll('div.revive-midpage')
+            .forEach(adDiv => (adDiv.innerHTML = ''));
 
           // Clean footer
           article
-            .querySelectorAll("div.print-show")
-            .forEach(printDiv => (printDiv.innerHTML = ""));
+            .querySelectorAll('div.print-show')
+            .forEach(printDiv => (printDiv.innerHTML = ''));
 
           return (dom.window.document.body.innerHTML = `${
             dom.window.document.body.innerHTML
@@ -80,18 +80,18 @@ async function processHrefs(hrefs, options) {
     }
   );
 
-  console.log("Fetching complete!");
+  console.log('Fetching complete!');
 
   return {
     html: dom.window.document.body.innerHTML,
     volumeNumberAndDate,
-    publicationName
+    publicationName,
   };
 }
 
 async function lrbParser(issueUrl) {
   const headers = {
-    cookie
+    cookie,
   };
 
   const options = getOptions({ headers, issueUrl });
@@ -104,14 +104,14 @@ async function lrbParser(issueUrl) {
     const tableOfContentsDom = new JSDOM(secondSplit[0]);
 
     const getVolumeNumberAndDate = `<p class="issue-link">${
-      result.split('<p class="issue-link">')[1].split("</p>")[0]
+      result.split('<p class="issue-link">')[1].split('</p>')[0]
     }</p>`;
 
     const contents = issueUrl.split(baseUrl)[1];
 
     volumeNumberAndDate = getVolumeNumberAndDate
       .split(`<a id="current-issue-link" href="${contents}">`)[1]
-      .split("</a>")[0];
+      .split('</a>')[0];
 
     const links = tableOfContentsDom.window.document.querySelectorAll(
       "a[class='title']"
