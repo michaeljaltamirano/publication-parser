@@ -3,16 +3,16 @@ const jsdom = require("jsdom");
 const ENV = require("../env");
 const UTILS = require("../utils");
 const { JSDOM } = jsdom;
-const { fetchContent, getOptions } = UTILS;
+const { fetchContent, getOptions, throwCookieError, handleError } = UTILS;
 
 let volumeNumberAndDate;
-
+const publicationName = "The New York Review of Books";
 // const cookie = "wordpress_logged_in_XXX=XXX";
 const { nyrbCookie: cookie } = ENV;
 
 async function processHrefs(hrefs, options) {
   const dom = new JSDOM(`<!DOCTYPE html>`);
-  dom.window.document.body.innerText = `<h1>The New York Review of Books, ${volumeNumberAndDate}</h1>`;
+  dom.window.document.body.innerText = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
 
   for (const href of hrefs) {
     // Get articles
@@ -20,6 +20,10 @@ async function processHrefs(hrefs, options) {
     await fetchContent(href, options)
       .then(result => {
         const articleDom = new JSDOM(result);
+
+        const paywall = articleDom.window.document.querySelector(".paywall");
+
+        if (paywall) throwCookieError();
 
         const article = articleDom.window.document.querySelector(
           "article.article"
@@ -30,20 +34,28 @@ async function processHrefs(hrefs, options) {
 
         return (dom.window.document.body.innerHTML = `${
           dom.window.document.body.innerHTML
-        }<div class="NEW-ARTICLE">${header.innerHTML}${body.innerHTML}</div>`);
+        }<div class="article-container">${header.innerHTML}${
+          body.innerHTML
+        }</div>`);
       })
-      .catch(err => console.log(err));
+      .catch(error => handleError(error));
   }
 
   fs.writeFile(
-    `output/nyrb/The New York Review of Books - ${volumeNumberAndDate}.html`,
+    `output/nyrb/${publicationName} - ${volumeNumberAndDate}.html`,
     dom.window.document.body.innerHTML,
-    err => {
-      if (err) throw err;
+    error => {
+      if (error) throw error;
     }
   );
 
-  console.log("DONE!");
+  console.log("Fetching complete!");
+
+  return {
+    html: dom.window.document.body.innerHTML,
+    volumeNumberAndDate,
+    publicationName
+  };
 }
 
 async function nyrbParser(issueUrl) {
@@ -54,7 +66,7 @@ async function nyrbParser(issueUrl) {
   const options = getOptions({ headers, issueUrl });
 
   // Get list of articles from the Table of Contents
-  fetchContent(issueUrl, options).then(result => {
+  return fetchContent(issueUrl, options).then(result => {
     const dom = new JSDOM(result);
     const tableOfContentsH2s = dom.window.document.querySelectorAll("h2");
     let hrefs = [];
@@ -68,7 +80,7 @@ async function nyrbParser(issueUrl) {
 
     volumeNumberAndDate = dom.window.document.querySelector("time").innerHTML;
 
-    processHrefs(hrefs, options);
+    return processHrefs(hrefs, options);
   });
 }
 

@@ -3,17 +3,18 @@ const jsdom = require("jsdom");
 const ENV = require("../env");
 const UTILS = require("../utils");
 const { JSDOM } = jsdom;
-const { fetchContent, getOptions } = UTILS;
+const { fetchContent, getOptions, throwCookieError, handleError } = UTILS;
 
 const baseUrl = "https://www.lrb.co.uk";
 let volumeNumberAndDate;
-
-// const cookie = "lrb-source=XXX; lrb-session=XXX; lrb-remember-me=XXX; lrb-segment=XXX";
+const publicationName = "The London Review of Books";
+// const cookie = "lrb-session=XXX; lrb-remember-me=XXX;";
 const { lrbCookie: cookie } = ENV;
 
 async function processHrefs(hrefs, options) {
   const dom = new JSDOM(`<!DOCTYPE html>`);
-  dom.window.document.body.innerHTML = `<h1>The London Review of Books, ${volumeNumberAndDate}</h1>`;
+
+  dom.window.document.body.innerHTML = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
 
   for (const item of hrefs) {
     // Get articles
@@ -21,8 +22,16 @@ async function processHrefs(hrefs, options) {
     await fetchContent(`${baseUrl}${item}`, options)
       .then(result => {
         const articleDom = new JSDOM(`<!DOCTYPE html>`);
-
         articleDom.window.document.body.innerHTML = result;
+
+        const subscriberOnly = articleDom.window.document.getElementById(
+          "subscriber-only"
+        );
+
+        const isPaywalled =
+          subscriberOnly && subscriberOnly.style.display !== "none";
+
+        if (isPaywalled) throwCookieError();
 
         const main = articleDom.window.document.getElementById("main");
         const article = main.querySelector("div.article-body");
@@ -46,7 +55,7 @@ async function processHrefs(hrefs, options) {
 
           return (dom.window.document.body.innerHTML = `${
             dom.window.document.body.innerHTML
-          }<div class="NEW-ARTICLE">${
+          }<div class="article-container">${
             article.innerHTML
           }</div><br>End Article<br>`);
         } else if (letters) {
@@ -60,18 +69,24 @@ async function processHrefs(hrefs, options) {
         // Not sure yet what other cases there are;
         return;
       })
-      .catch(err => console.log(err));
+      .catch(err => handleError(err));
   }
 
   fs.writeFile(
-    `output/lrb/The London Review of Books - ${volumeNumberAndDate}.html`,
+    `output/lrb/${publicationName} - ${volumeNumberAndDate}.html`,
     dom.window.document.body.innerHTML,
     err => {
       if (err) throw err;
     }
   );
 
-  console.log("DONE!");
+  console.log("Fetching complete!");
+
+  return {
+    html: dom.window.document.body.innerHTML,
+    volumeNumberAndDate,
+    publicationName
+  };
 }
 
 async function lrbParser(issueUrl) {
@@ -82,7 +97,7 @@ async function lrbParser(issueUrl) {
   const options = getOptions({ headers, issueUrl });
 
   // Get list of articles
-  fetchContent(issueUrl, options).then(result => {
+  return fetchContent(issueUrl, options).then(result => {
     const firstSplit = result.split('<ul class="article-list">');
     const secondSplit = firstSplit[1].split('<script type="text/javascript">');
 
@@ -103,10 +118,9 @@ async function lrbParser(issueUrl) {
     );
 
     const arrayLinks = Array.from(links);
-
     const hrefs = arrayLinks.map(a => a.href);
 
-    processHrefs(hrefs, options);
+    return processHrefs(hrefs, options);
   });
 }
 

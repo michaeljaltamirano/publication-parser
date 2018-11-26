@@ -3,16 +3,17 @@ const jsdom = require("jsdom");
 const ENV = require("../env");
 const UTILS = require("../utils");
 const { JSDOM } = jsdom;
-const { fetchContent, getOptions } = UTILS;
+const { fetchContent, getOptions, throwCookieError, handleError } = UTILS;
 
 let volumeNumberAndDate;
-
+const publicationName = "Harper's Magazine";
 // const cookie = "wordpress_logged_in_XXX=XXX";
 const { harpersCookie: cookie } = ENV;
 
 async function processHrefs(hrefs, options) {
   const dom = new JSDOM(`<!DOCTYPE html>`);
-  dom.window.document.body.innerText = `<h1>Harper's Magazine, ${volumeNumberAndDate}</h1>`;
+  dom.window.document.body.innerText = `<h1>${publicationName} ${volumeNumberAndDate}</h1>`;
+  let pdfs = [];
 
   for (const href of hrefs) {
     // Get articles
@@ -21,32 +22,59 @@ async function processHrefs(hrefs, options) {
       .then(result => {
         const articleDom = new JSDOM(result);
 
+        const paywall = articleDom.window.document.getElementById(
+          "leaky_paywall_message"
+        );
+
+        if (paywall) throwCookieError();
+
         const issueArticle = articleDom.window.document.getElementById(
           "issueArticle"
         );
 
-        const post = issueArticle.querySelector(".post");
-        const articlePost = issueArticle.querySelector(".articlePost");
-        const bio = issueArticle.querySelector(".COA_roles_fix");
+        const pdfOnly = issueArticle.querySelector(".highLightBox");
 
-        return (dom.window.document.body.innerHTML = `${
-          dom.window.document.body.innerHTML
-        }<div class="NEW-ARTICLE">${post.innerHTML}${articlePost.innerHTML}${
-          bio.innerHTML
-        }</div>`);
+        if (pdfOnly) {
+          const start = pdfOnly.outerHTML.indexOf(
+            "https://archive.harpers.org/"
+          );
+          const end = pdfOnly.outerHTML.indexOf(">PDF<") - 1;
+          const title = issueArticle.querySelector("h1").textContent;
+          const path = pdfOnly.outerHTML.substring(start, end);
+
+          // Attachment formatting for Nodemailer
+          pdfs.push({ path, title, contentType: "application/pdf" });
+        } else {
+          const post = issueArticle.querySelector(".post");
+          const articlePost = issueArticle.querySelector(".articlePost");
+          const bio = issueArticle.querySelector(".COA_roles_fix");
+
+          return (dom.window.document.body.innerHTML = `${
+            dom.window.document.body.innerHTML
+          }<div class="article-container">${post.innerHTML}${
+            articlePost.innerHTML
+          }${bio.innerHTML}</div>`);
+        }
       })
-      .catch(err => console.log(err));
+      .catch(error => handleError(error));
   }
 
   fs.writeFile(
-    `output/harpers/Harper's Magazine - ${volumeNumberAndDate}.html`,
+    `output/harpers/${publicationName} - ${volumeNumberAndDate}.html`,
     dom.window.document.body.innerHTML,
-    err => {
-      if (err) throw err;
+    error => {
+      if (error) throw error;
     }
   );
 
-  console.log("DONE!");
+  console.log("Fetching complete!");
+
+  return {
+    html: dom.window.document.body.innerHTML,
+    volumeNumberAndDate,
+    publicationName,
+    pdfs
+  };
 }
 
 async function harpersParser(issueUrl) {
@@ -57,7 +85,7 @@ async function harpersParser(issueUrl) {
   const options = getOptions({ headers, issueUrl });
 
   // Get list of articles from the Table of Contents
-  fetchContent(issueUrl, options).then(result => {
+  return fetchContent(issueUrl, options).then(result => {
     const dom = new JSDOM(result);
     const issueContent = dom.window.document.getElementById("issueContent");
     const issues = issueContent.querySelectorAll(".Issue");
@@ -72,7 +100,7 @@ async function harpersParser(issueUrl) {
 
     volumeNumberAndDate = dom.window.document.querySelector("h1").innerHTML;
 
-    processHrefs(hrefs, options);
+    return processHrefs(hrefs, options);
   });
 }
 

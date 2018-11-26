@@ -3,24 +3,34 @@ const jsdom = require("jsdom");
 const ENV = require("../env");
 const UTILS = require("../utils");
 const { JSDOM } = jsdom;
-const { fetchContent, fetchContentArrayBuffer, getOptions } = UTILS;
+const {
+  fetchContent,
+  fetchContentArrayBuffer,
+  getOptions,
+  throwCookieError,
+  handleError
+} = UTILS;
 
 const baseUrl = "https://bookforum.com/";
 let volumeNumberAndDate;
-
+const publicationName = "Bookforum";
 // const cookie = "bfsid=XXX; login=XXX";
 const { bookforumCookie: cookie } = ENV;
 
 async function processHrefs(hrefs, options) {
   const dom = new JSDOM(`<!DOCTYPE html>`);
-  dom.window.document.body.innerHTML = `<h1>Bookforum, ${volumeNumberAndDate}</h1>`;
+  dom.window.document.body.innerHTML = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
 
   for (const href of hrefs) {
     // Get articles
-    console.log(`Fetching: ${href}`);
+    console.log(`Fetching: ${baseUrl}${href}`);
     await fetchContentArrayBuffer(`${baseUrl}${href}`, options)
       .then(result => {
         const articleDom = new JSDOM(result);
+
+        const paywall = articleDom.window.document.querySelector(".Paywall");
+
+        if (paywall) throwCookieError();
 
         const article = articleDom.window.document.querySelector(".Core");
 
@@ -28,16 +38,13 @@ async function processHrefs(hrefs, options) {
         // comments sections, and social media tools
         const listPrice = articleDom.window.document.querySelector("h4");
         if (listPrice) listPrice.innerHTML = "";
-
         const purchaseLinks = articleDom.window.document.querySelector("h5");
         if (purchaseLinks) purchaseLinks.innerHTML = "";
-
         const issueAndVolume = articleDom.window.document.querySelector("h6");
         if (issueAndVolume) issueAndVolume.innerHTML = "";
 
         const tools = article.querySelectorAll(".Tools");
         if (tools) tools.forEach(tool => (tool.innerHTML = ""));
-
         const talkback = article.querySelector(".TalkBack");
         if (talkback) talkback.innerHTML = "";
 
@@ -47,20 +54,26 @@ async function processHrefs(hrefs, options) {
 
         return (dom.window.document.body.innerHTML = `${
           dom.window.document.body.innerHTML
-        }<div class="NEW-ARTICLE">${article.innerHTML}</div>`);
+        }<div class="article-container">${article.innerHTML}</div>`);
       })
-      .catch(err => console.log(err));
+      .catch(err => handleError(err));
   }
 
   fs.writeFile(
-    `output/bookforum/Bookforum - ${volumeNumberAndDate}.html`,
+    `output/bookforum/${publicationName} - ${volumeNumberAndDate}.html`,
     dom.window.document.body.innerHTML,
     err => {
       if (err) throw err;
     }
   );
 
-  console.log("DONE!");
+  console.log("Fetching complete!");
+
+  return {
+    html: dom.window.document.body.innerHTML,
+    volumeNumberAndDate,
+    publicationName
+  };
 }
 
 async function bookforumParser(issueUrl) {
@@ -73,15 +86,13 @@ async function bookforumParser(issueUrl) {
   const options = getOptions({ headers, issueUrl: `${baseUrl}${issueUrl}` });
 
   // Get list of articles from the Table of Contents
-  fetchContent(issueUrl, options).then(result => {
+  return fetchContent(issueUrl, options).then(result => {
     const dom = new JSDOM(result);
-
     const toc = dom.window.document.getElementById("ToC");
-
     const a = toc.querySelectorAll("a");
-
     const setLinks = new Set();
 
+    // Only grab article links, not author or section links
     a.forEach(link => {
       if (link.href.indexOf("/inprint/") > -1) {
         setLinks.add(link.href);
@@ -91,11 +102,12 @@ async function bookforumParser(issueUrl) {
     // Clear dupes (lazy);
     const hrefs = Array.from(setLinks);
 
+    // Cleans bookforum format--Sep/Oct/Nov--since those aren't directories
     volumeNumberAndDate = dom.window.document
       .querySelector(".Topper")
       .textContent.replace(/\//g, "-");
 
-    processHrefs(hrefs, options);
+    return processHrefs(hrefs, options);
   });
 }
 

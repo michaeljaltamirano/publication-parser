@@ -1,56 +1,111 @@
 const fs = require("fs");
 const readline = require("readline");
+const nodemailer = require("nodemailer");
 const harpersParser = require("./parsers/harpers");
 const lrbParser = require("./parsers/lrb");
 const nyrbParser = require("./parsers/nyrb");
 const bookforumParser = require("./parsers/bookforum");
+const { logProgress, configure } = require("progress-estimator");
+const path = require("path");
+const ENV = require("./env");
+const {
+  email: { recipient, sender, twoFactorPassword }
+} = ENV;
 
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 });
 
-function getPublicationParser(publicationName) {
-  switch (publicationName) {
+function getPublicationInfo(input) {
+  switch (input) {
     case 1:
-      return lrbParser;
+      return {
+        exampleUrl: "https://www.lrb.co.uk/v40/n20/contents",
+        publicationParser: lrbParser,
+        shorthand: "lrb"
+      };
     case 2:
-      return nyrbParser;
+      return {
+        exampleUrl: "https://www.nybooks.com/issues/2018/12/06/",
+        publicationParser: nyrbParser,
+        shorthand: "nyrb"
+      };
     case 3:
-      return harpersParser;
+      return {
+        exampleUrl: "https://harpers.org/archive/2018/12/",
+        publicationParser: harpersParser,
+        shorthand: "harpers"
+      };
     case 4:
-      return bookforumParser;
+      return {
+        exampleUrl: "https://bookforum.com/inprint/025_03",
+        publicationParser: bookforumParser,
+        shorthand: "bookforum"
+      };
     default:
       throw new Error("Publication not found");
   }
 }
 
-function getExampleUrl(publicationName) {
-  switch (publicationName) {
-    case 1:
-      return "https://www.lrb.co.uk/v40/n20/contents";
-    case 2:
-      return "https://www.nybooks.com/issues/2018/12/06/";
-    case 3:
-      return "https://harpers.org/archive/2018/12/";
-    case 4:
-      return "https://bookforum.com/inprint/025_03";
-    default:
-      throw new Error("Publication not found");
+// Currently support only Gmail
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: sender,
+    pass: twoFactorPassword
   }
+});
+
+async function send(mailOptions) {
+  const emailSentMsg = await transporter
+    .sendMail(mailOptions)
+    .then(info => console.log("Email sent: " + info.response))
+    .catch(error => console.log(error));
+
+  console.log(emailSentMsg);
+}
+
+async function sendEmail(mailOptions) {
+  await logProgress(send(mailOptions), "Sending email now", 4000);
 }
 
 rl.question(
   "Please enter the number associated with the publication you would like to scrape: \n  1 - LRB \n  2 - NYRB \n  3 - Harper's \n  4 - Bookforum \n\n  Answer: ",
-  number => {
-    const exampleUrl = getExampleUrl(parseInt(number));
+  input => {
+    const { exampleUrl, publicationParser, shorthand } = getPublicationInfo(
+      parseInt(input)
+    );
 
     rl.question(
       `\nPlease enter the full URL for the LRB or NYRB issue you would like to scrape (e.g. ${exampleUrl})\n\n  Answer: `,
       issueUrl => {
-        const publicationParser = getPublicationParser(parseInt(number));
+        publicationParser(issueUrl).then(res => {
+          configure({
+            storagePath: path.join(
+              __dirname,
+              `.progress-estimator/${shorthand}`
+            )
+          });
 
-        publicationParser(issueUrl);
+          // PDFs currently only present in Harper's output
+          const { html, volumeNumberAndDate, publicationName, pdfs = [] } = res;
+
+          const mailOptions = {
+            from: sender,
+            to: recipient,
+            subject: `${publicationName} - ${volumeNumberAndDate}`,
+            attachments: [
+              {
+                filename: `${publicationName} - ${volumeNumberAndDate}`,
+                content: html,
+                contentType: "text/html"
+              }
+            ].concat(pdfs)
+          };
+
+          sendEmail(mailOptions);
+        });
 
         rl.close();
       }

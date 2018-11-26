@@ -1,6 +1,6 @@
 {
-  "name": "magazine-parser",
-  "version": "1.0.0",
+  "name": "publication-parser",
+  "version": "0.5.0",
   "description": "Parses the written content of various publications",
   "main": "index.js",
   "scripts": {
@@ -9,17 +9,19 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mjaltamirano/magazine-parser.git"
+    "url": "git+https://github.com/mjaltamirano/publication-parser.git"
   },
   "author": "Michael J. Altamirano",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mjaltamirano/magazine-parser/issues"
+    "url": "https://github.com/mjaltamirano/publication-parser/issues"
   },
-  "homepage": "https://github.com/mjaltamirano/magazine-parser#readme",
+  "homepage": "https://github.com/mjaltamirano/publication-parser#readme",
   "dependencies": {
     "jsdom": "^13.0.0",
-    "node-fetch": "^2.2.1"
+    "node-fetch": "^2.2.1",
+    "nodemailer": "^4.7.0",
+    "progress-estimator": "^0.1.1"
   },
   "devDependencies": {
     "prettier": "^1.15.2"

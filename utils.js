@@ -36,8 +36,21 @@ function getOptions({ headers, issueUrl }) {
   };
 }
 
+function throwCookieError() {
+  throw new Error(
+    "\033[31mYOUR COOKIES HAVE EXPIRED! Please reset them to get the full article content"
+  );
+}
+
+function handleError(err) {
+  console.log(err.message);
+  return process.exit();
+}
+
 module.exports = {
   fetchContent,
   getOptions,
-  fetchContentArrayBuffer
+  fetchContentArrayBuffer,
+  throwCookieError,
+  handleError
 };
