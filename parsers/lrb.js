@@ -38,6 +38,17 @@ async function processHrefs(hrefs, options) {
         const letters = main.querySelector('div.letters');
 
         if (article) {
+          // Clear publisher information
+          const booksEl = article.querySelector('ul.books');
+
+          if (booksEl) {
+            booksEl
+              .querySelectorAll('span')
+              .forEach(span => (span.innerHTML = ''));
+            const bookEls = booksEl.querySelectorAll('li');
+            if (bookEls) bookEls.forEach(li => li.removeChild(li.lastChild));
+          }
+
           // Clean script tags
           article
             .querySelectorAll('script')
