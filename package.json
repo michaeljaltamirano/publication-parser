@@ -1,11 +1,12 @@
 {
   "name": "publication-parser",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Parses the written content of various publications",
   "main": "index.js",
   "scripts": {
     "prettier": "prettier",
     "eslint": "eslint",
+    "start": "node ./index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

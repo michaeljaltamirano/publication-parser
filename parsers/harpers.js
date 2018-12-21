@@ -46,6 +46,17 @@ async function processHrefs(hrefs, options) {
           pdfs.push({ path, title, contentType: 'application/pdf' });
         } else {
           const post = issueArticle.querySelector('.post');
+
+          // Remove CTA text
+          const downloadPdf = post.querySelector('.tabDownloadPDF');
+          if (downloadPdf) downloadPdf.remove(downloadPdf);
+          const readOnline = post.querySelector('.tabMicrofiche');
+          if (readOnline) readOnline.remove(readOnline);
+          // Remove "From the [date] issue" text that accompanies every
+          // article, but keep the section heading
+          const category = post.querySelector('.category');
+          if (category) category.removeChild(category.lastChild);
+
           const articlePost = issueArticle.querySelector('.articlePost');
           const bio = issueArticle.querySelector('.COA_roles_fix');
 
