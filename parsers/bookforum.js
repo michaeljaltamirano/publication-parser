@@ -11,7 +11,7 @@ const {
   handleError,
 } = UTILS;
 
-const baseUrl = 'https://bookforum.com/';
+const baseUrl = 'https://bookforum.com';
 let volumeNumberAndDate;
 const publicationName = 'Bookforum';
 // const cookie = "bfsid=XXX; login=XXX";
