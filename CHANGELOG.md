@@ -1,5 +1,8 @@
+### 0.9.0
+- [Parsers] Update London Review of Books parser for December 2019 website update [(#48)](https://github.com/mjaltamirano/publication-parser/pull/48)
+
 ### 0.8.0
-- [Parser] Update Bookforum parser for May 2019 website update
+- [Parsers] Update Bookforum parser for May 2019 website update [(#47)](https://github.com/mjaltamirano/publication-parser/pull/47)
 
 ### 0.7.1
 

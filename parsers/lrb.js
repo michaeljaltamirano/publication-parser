@@ -4,14 +4,12 @@ const ENV = require('../env');
 const UTILS = require('../utils');
 const { JSDOM } = jsdom;
 const { fetchContent, getOptions, throwCookieError, handleError } = UTILS;
-
 const baseUrl = 'https://www.lrb.co.uk';
-let volumeNumberAndDate;
 const publicationName = 'The London Review of Books';
 // const cookie = "lrb-session=XXX; lrb-remember-me=XXX;";
 const { lrbCookie: cookie } = ENV;
 
-async function processHrefs(hrefs, options) {
+async function processHrefs(hrefs, volumeNumberAndDate, options) {
   const dom = new JSDOM(`<!DOCTYPE html>`);
 
   dom.window.document.body.innerHTML = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
@@ -24,61 +22,85 @@ async function processHrefs(hrefs, options) {
         const articleDom = new JSDOM(`<!DOCTYPE html>`);
         articleDom.window.document.body.innerHTML = result;
 
-        const subscriberOnly = articleDom.window.document.getElementById(
-          'subscriber-only'
+        const isPaywalled = !!articleDom.window.document.getElementById(
+          'lrb-pw-block'
         );
-
-        const isPaywalled =
-          subscriberOnly && subscriberOnly.style.display !== 'none';
 
         if (isPaywalled) throwCookieError();
 
-        const main = articleDom.window.document.getElementById('main');
-        const article = main.querySelector('div.article-body');
-        const letters = main.querySelector('div.letters');
+        // If present, parse letters-specific page
+        const lettersHeader = articleDom.window.document.getElementById(
+          'letters-heading-holder'
+        );
 
-        if (article) {
-          // Clear publisher information
-          const booksEl = article.querySelector('ul.books');
+        // Otherwise, parse regular articlee
+        const articleHeader = articleDom.window.document.getElementById(
+          'article-heading-holder'
+        );
 
-          if (booksEl) {
-            booksEl
-              .querySelectorAll('span')
-              .forEach(span => (span.innerHTML = ''));
-            const bookEls = booksEl.querySelectorAll('li');
-            if (bookEls) bookEls.forEach(li => li.removeChild(li.lastChild));
+        if (lettersHeader) {
+          const letters = articleDom.window.document.getElementById(
+            'lrb-lettersCopy'
+          );
+
+          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<h1>${lettersHeader.firstChild.innerHTML}</h1><div>${letters.innerHTML}</div><br>End Letters<br>`);
+        } else if (articleHeader) {
+          const h1 = articleHeader.firstChild.textContent;
+          const h2 = articleHeader.lastChild.textContent;
+          const reviewedItemsHolder = articleDom.window.document.querySelector(
+            '.reviewed-items-holder'
+          );
+          let reviewedItemsContent = {
+            innerHTML: '',
+          };
+
+          if (reviewedItemsHolder) {
+            const reviewedItems = articleDom.window.document.querySelector(
+              '.reviewed-items'
+            );
+
+            if (reviewedItems) {
+              // Remove show more link
+              const showMores = reviewedItemsHolder.querySelectorAll(
+                '.lrb-readmorelink'
+              );
+
+              if (showMores)
+                showMores.forEach(showMoreLink => showMoreLink.remove());
+
+              // Clean info
+              reviewedItems.childNodes.forEach(review => {
+                const by = review.querySelector('.by');
+                const meta = by.querySelector('.item-meta');
+
+                // If there's book info, remove it
+                if (meta.querySelector('.nowrap')) {
+                  by.removeChild(meta);
+                }
+              });
+
+              reviewedItemsContent = reviewedItems;
+            }
           }
 
-          // Clean script tags
-          article
-            .querySelectorAll('script')
-            .forEach(script => (script.innerHTML = ''));
+          // Remove subscriber mask
+          const articleMask = body.querySelector('.article-mask');
+          if (articleMask) body.removeChild(articleMask);
 
-          // Clean ads
-          article
-            .querySelectorAll('div.revive-midpage')
-            .forEach(adDiv => (adDiv.innerHTML = ''));
+          const body = articleDom.window.document.querySelector(
+            '.article-copy'
+          );
 
-          // Clean footer
-          article
-            .querySelectorAll('div.print-show')
-            .forEach(printDiv => (printDiv.innerHTML = ''));
+          // If there's images, correctly load them
+          body.querySelectorAll('img').forEach(img => {
+            const srcset = img.getAttribute('data-srcset');
+            img.src = `http://www.lrb.co.uk${srcset}`;
+          });
 
-          return (dom.window.document.body.innerHTML = `${
-            dom.window.document.body.innerHTML
-          }<div class="article-container">${
-            article.innerHTML
-          }</div><br>End Article<br>`);
-        } else if (letters) {
-          return (dom.window.document.body.innerHTML = `${
-            dom.window.document.body.innerHTML
-          }<div class="LETTERS"><h1 class="indent">Letters</h1>${
-            letters.innerHTML
-          }</div><br>End Letters<br>`);
+          const innerHTMLWithArticle = `${dom.window.document.body.innerHTML}<div><h1>${h1}</h1><h2>${h2}</h2></div><div>${reviewedItemsContent.innerHTML}</div><div>${body.innerHTML}</div><br>End Article<br>`;
+
+          dom.window.document.body.innerHTML = innerHTMLWithArticle;
         }
-
-        // Not sure yet what other cases there are;
-        return;
       })
       .catch(err => handleError(err));
   }
@@ -109,29 +131,30 @@ async function lrbParser(issueUrl) {
 
   // Get list of articles
   return fetchContent(issueUrl, options).then(result => {
-    const firstSplit = result.split('<ul class="article-list">');
-    const secondSplit = firstSplit[1].split('<script type="text/javascript">');
+    const firstDateSplit = result.split(`<div class="toc-cover-titles">`);
+    const secondDateSplit = firstDateSplit[1].split(
+      `</div><div class="toc-cover-artist">`
+    );
+    const dateDom = new JSDOM(`<!DOCTYPE html>`);
 
-    const tableOfContentsDom = new JSDOM(secondSplit[0]);
+    dateDom.window.document.body.innerHTML = `<div id="date-and-volume">${secondDateSplit[0]}</div>`;
 
-    const getVolumeNumberAndDate = `<p class="issue-link">${
-      result.split('<p class="issue-link">')[1].split('</p>')[0]
-    }</p>`;
+    const div = dateDom.window.document.getElementById('date-and-volume');
 
-    const contents = issueUrl.split(baseUrl)[1];
+    const volumeNumberAndDate = div.firstChild.textContent;
 
-    volumeNumberAndDate = getVolumeNumberAndDate
-      .split(`<a id="current-issue-link" href="${contents}">`)[1]
-      .split('</a>')[0];
-
-    const links = tableOfContentsDom.window.document.querySelectorAll(
-      "a[class='title']"
+    const firstSplit = result.split(`<div class="toc-content-holder">`);
+    const secondSplit = firstSplit[1].split(
+      `</div><div class="toc-cover-artist toc-cover-artist--footer" aria-hidden="true">`
     );
 
-    const arrayLinks = Array.from(links);
-    const hrefs = arrayLinks.map(a => a.href);
+    const dom = new JSDOM(`<!DOCTYPE html>`);
+    dom.window.document.body.innerHTML = secondSplit[0];
 
-    return processHrefs(hrefs, options);
+    const linksDiv = dom.window.document.body.querySelector('.toc-grid-items');
+    const hrefs = Array.from(linksDiv.childNodes).map(link => link.href);
+
+    return processHrefs(hrefs, volumeNumberAndDate, options);
   });
 }
 
