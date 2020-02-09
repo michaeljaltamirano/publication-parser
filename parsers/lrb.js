@@ -33,7 +33,7 @@ async function processHrefs(hrefs, volumeNumberAndDate, options) {
           'letters-heading-holder'
         );
 
-        // Otherwise, parse regular articlee
+        // Otherwise, parse regular article
         const articleHeader = articleDom.window.document.getElementById(
           'article-heading-holder'
         );
@@ -83,13 +83,13 @@ async function processHrefs(hrefs, volumeNumberAndDate, options) {
             }
           }
 
-          // Remove subscriber mask
-          const articleMask = body.querySelector('.article-mask');
-          if (articleMask) body.removeChild(articleMask);
-
           const body = articleDom.window.document.querySelector(
             '.article-copy'
           );
+
+          // Remove subscriber mask
+          const articleMask = body.querySelector('.article-mask');
+          if (articleMask) body.removeChild(articleMask);
 
           // If there's images, correctly load them
           body.querySelectorAll('img').forEach(img => {

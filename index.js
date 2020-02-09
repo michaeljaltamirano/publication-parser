@@ -5,7 +5,7 @@ const harpersParser = require('./parsers/harpers');
 const lrbParser = require('./parsers/lrb');
 const nyrbParser = require('./parsers/nyrb');
 const bookforumParser = require('./parsers/bookforum');
-const { logProgress, configure } = require('progress-estimator');
+const createLogger = require('progress-estimator');
 const path = require('path');
 const ENV = require('./env');
 const {
@@ -66,8 +66,8 @@ async function send(mailOptions) {
   console.log(emailSentMsg);
 }
 
-async function sendEmail(mailOptions) {
-  await logProgress(send(mailOptions), 'Sending email now', 4000);
+async function sendEmail(mailOptions, logger) {
+  await logger(send(mailOptions), 'Sending email now', 4000);
 }
 
 rl.question(
@@ -81,7 +81,7 @@ rl.question(
       `\nPlease enter the full URL for the LRB or NYRB issue you would like to scrape (e.g. ${exampleUrl})\n\n  Answer: `,
       issueUrl => {
         publicationParser(issueUrl).then(res => {
-          configure({
+          const logger = createLogger({
             storagePath: path.join(
               __dirname,
               `.progress-estimator/${shorthand}`
@@ -104,7 +104,7 @@ rl.question(
             ].concat(pdfs),
           };
 
-          sendEmail(mailOptions);
+          sendEmail(mailOptions, logger);
         });
 
         rl.close();
