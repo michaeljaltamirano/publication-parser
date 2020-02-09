@@ -8,19 +8,14 @@ function fetchContent(url, options) {
 
 function fetchContentArrayBuffer(url, options) {
   return fetch(url, options)
-    .then(res => {
-      const contentType = options.headers['Content-Type'];
-      const charset = contentType.substring(
-        contentType.indexOf('charset=') + 8
-      );
-
-      return res.arrayBuffer().then(ab => {
+    .then(res =>
+      res.arrayBuffer().then(ab => {
         const dataView = new DataView(ab);
-        const decoder = new TextDecoder(charset);
+        const decoder = new TextDecoder();
 
         return decoder.decode(dataView);
-      });
-    })
+      })
+    )
     .catch(err => console.log('err', err));
 }
 

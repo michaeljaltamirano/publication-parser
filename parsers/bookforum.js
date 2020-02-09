@@ -11,50 +11,51 @@ const {
   handleError,
 } = UTILS;
 
-const baseUrl = 'https://bookforum.com';
-let volumeNumberAndDate;
 const publicationName = 'Bookforum';
 // const cookie = "bfsid=XXX; login=XXX";
 const { bookforumCookie: cookie } = ENV;
 
-async function processHrefs(hrefs, options) {
+async function processHrefs(hrefs, volumeNumberAndDate, options) {
   const dom = new JSDOM(`<!DOCTYPE html>`);
   dom.window.document.body.innerHTML = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
 
   for (const href of hrefs) {
     // Get articles
-    console.log(`Fetching: ${baseUrl}${href}`);
-    await fetchContentArrayBuffer(`${baseUrl}${href}`, options)
+    console.log(`Fetching: ${href}`);
+    await fetchContentArrayBuffer(`${href}`, options)
       .then(result => {
         const articleDom = new JSDOM(result);
 
-        const paywall = articleDom.window.document.querySelector('.Paywall');
+        const paywall = articleDom.window.document.querySelector('.paywall');
 
-        if (paywall) throwCookieError();
+        const isPaywalled =
+          paywall && paywall.getAttribute('style').includes('display: none');
 
-        const article = articleDom.window.document.querySelector('.Core');
+        if (isPaywalled) throwCookieError();
 
-        // Clear cruft: issue volume, list price, external purchase links,
-        // comments sections, and social media tools
-        const listPrice = articleDom.window.document.querySelector('h4');
-        if (listPrice) listPrice.innerHTML = '';
-        const purchaseLinks = articleDom.window.document.querySelector('h5');
-        if (purchaseLinks) purchaseLinks.innerHTML = '';
-        const issueAndVolume = articleDom.window.document.querySelector('h6');
-        if (issueAndVolume) issueAndVolume.innerHTML = '';
+        const article = articleDom.window.document.querySelector(
+          '.blog-article'
+        );
 
-        const tools = article.querySelectorAll('.Tools');
-        if (tools) tools.forEach(tool => (tool.innerHTML = ''));
-        const talkback = article.querySelector('.TalkBack');
-        if (talkback) talkback.innerHTML = '';
+        // Clear cruft: purchase links, social share links, anchor link formatting
+        article
+          .querySelectorAll('.book-info__purchase-links')
+          .forEach(el => (el.innerHTML = ''));
+        article
+          .querySelectorAll('af-share-toggle')
+          .forEach(el => (el.innerHTML = ''));
+        article
+          .querySelectorAll('a')
+          .forEach(el => (el.parentNode.innerHTML = el.innerHTML));
 
-        const images = article.querySelectorAll('img');
+        // Src in form //www, prepend for proper rendering outside of browser
+        article
+          .querySelectorAll('img')
+          .forEach(image => (image.src = `https:${image.src}`));
 
-        images.forEach(image => (image.src = `${baseUrl}${image.src}`));
+        const articleString = `${dom.window.document.body.innerHTML}<div class="article-container">${article.innerHTML}</div>`;
 
-        return (dom.window.document.body.innerHTML = `${
-          dom.window.document.body.innerHTML
-        }<div class="article-container">${article.innerHTML}</div>`);
+        dom.window.document.body.innerHTML = articleString;
       })
       .catch(err => handleError(err));
   }
@@ -79,35 +80,29 @@ async function processHrefs(hrefs, options) {
 async function bookforumParser(issueUrl) {
   const headers = {
     cookie,
-    // Bookforum charset for accented and other characters
-    'Content-Type': 'text/html; charset=iso-8859-15',
   };
 
-  const options = getOptions({ headers, issueUrl: `${baseUrl}${issueUrl}` });
+  const options = getOptions({ headers, issueUrl: `${issueUrl}` });
 
   // Get list of articles from the Table of Contents
   return fetchContent(issueUrl, options).then(result => {
     const dom = new JSDOM(result);
-    const toc = dom.window.document.getElementById('ToC');
-    const a = toc.querySelectorAll('a');
-    const setLinks = new Set();
 
-    // Only grab article links, not author or section links
-    a.forEach(link => {
-      if (link.href.indexOf('/inprint/') > -1) {
-        setLinks.add(link.href);
-      }
-    });
+    const articleLinks = dom.window.document.querySelectorAll(
+      '.toc-article__link'
+    );
 
-    // Clear dupes (lazy);
-    const hrefs = Array.from(setLinks);
+    // Clear duplicate links for feature headings
+    const hrefs = Array.from(
+      new Set(Array.from(articleLinks).map(article => article.href))
+    );
 
-    // Cleans bookforum format--Sep/Oct/Nov--since those aren't directories
-    volumeNumberAndDate = dom.window.document
-      .querySelector('.Topper')
+    // Cleans bookforum format--"Sep/Oct/Nov"--since those aren't directories
+    const volumeNumberAndDate = dom.window.document
+      .querySelector('.toc-issue__title')
       .textContent.replace(/\//g, '-');
 
-    return processHrefs(hrefs, options);
+    return processHrefs(hrefs, volumeNumberAndDate, options);
   });
 }
 

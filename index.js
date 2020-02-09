@@ -97,7 +97,7 @@ rl.question(
             subject: `${publicationName} - ${volumeNumberAndDate}`,
             attachments: [
               {
-                filename: `${publicationName} - ${volumeNumberAndDate}`,
+                filename: `${publicationName} - ${volumeNumberAndDate}.html`,
                 content: html,
                 contentType: 'text/html',
               },

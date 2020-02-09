@@ -1,6 +1,6 @@
 {
   "name": "publication-parser",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "Parses the written content of various publications",
   "main": "index.js",
   "scripts": {
