@@ -1,15 +1,24 @@
-const fs = require('fs');
-const jsdom = require('jsdom');
-const ENV = require('../env');
-const UTILS = require('../utils');
+import fs from 'fs';
+import jsdom from 'jsdom';
+import ENV from '../env';
 const { JSDOM } = jsdom;
-const { fetchContent, getOptions, throwCookieError, handleError } = UTILS;
+import {
+  fetchContent,
+  getOptions,
+  throwCookieError,
+  handleError,
+} from '../utils';
+
 const baseUrl = 'https://www.lrb.co.uk';
 const publicationName = 'The London Review of Books';
 // const cookie = "lrb-session=XXX; lrb-remember-me=XXX;";
 const { lrbCookie: cookie } = ENV;
 
-async function processHrefs(hrefs, volumeNumberAndDate, options) {
+async function processHrefs(
+  hrefs: string[],
+  volumeNumberAndDate: string,
+  options: object,
+) {
   const dom = new JSDOM(`<!DOCTYPE html>`);
 
   dom.window.document.body.innerHTML = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
@@ -18,58 +27,64 @@ async function processHrefs(hrefs, volumeNumberAndDate, options) {
     // Get articles
     console.log(`Fetching: ${baseUrl}${item}`);
     await fetchContent(`${baseUrl}${item}`, options)
-      .then(result => {
+      .then((result) => {
+        if (!result) {
+          throw new Error('fetchContent error!');
+        }
+
         const articleDom = new JSDOM(`<!DOCTYPE html>`);
         articleDom.window.document.body.innerHTML = result;
 
         const isPaywalled = !!articleDom.window.document.getElementById(
-          'lrb-pw-block'
+          'lrb-pw-block',
         );
 
         if (isPaywalled) throwCookieError();
 
         // If present, parse letters-specific page
         const lettersHeader = articleDom.window.document.getElementById(
-          'letters-heading-holder'
+          'letters-heading-holder',
         );
 
         // Otherwise, parse regular article
         const articleHeader = articleDom.window.document.getElementById(
-          'article-heading-holder'
+          'article-heading-holder',
         );
 
         if (lettersHeader) {
           const letters = articleDom.window.document.getElementById(
-            'lrb-lettersCopy'
+            'lrb-lettersCopy',
           );
 
-          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<h1>${lettersHeader.firstChild.innerHTML}</h1><div>${letters.innerHTML}</div><br>End Letters<br>`);
+          const lettersHeaderFirstChild = <HTMLElement>lettersHeader.firstChild;
+
+          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<h1>${lettersHeaderFirstChild.innerHTML}</h1><div>${letters.innerHTML}</div><br>End Letters<br>`);
         } else if (articleHeader) {
           const h1 = articleHeader.firstChild.textContent;
           const h2 = articleHeader.lastChild.textContent;
           const reviewedItemsHolder = articleDom.window.document.querySelector(
-            '.reviewed-items-holder'
+            '.reviewed-items-holder',
           );
           let reviewedItemsContent = {
             innerHTML: '',
           };
 
           if (reviewedItemsHolder) {
-            const reviewedItems = articleDom.window.document.querySelector(
-              '.reviewed-items'
+            const reviewedItems = <HTMLElement>(
+              articleDom.window.document.querySelector('.reviewed-items')
             );
 
             if (reviewedItems) {
               // Remove show more link
               const showMores = reviewedItemsHolder.querySelectorAll(
-                '.lrb-readmorelink'
+                '.lrb-readmorelink',
               );
 
               if (showMores)
-                showMores.forEach(showMoreLink => showMoreLink.remove());
+                showMores.forEach((showMoreLink) => showMoreLink.remove());
 
               // Clean info
-              reviewedItems.childNodes.forEach(review => {
+              reviewedItems.childNodes.forEach((review: HTMLElement) => {
                 const by = review.querySelector('.by');
                 const meta = by.querySelector('.item-meta');
 
@@ -84,7 +99,7 @@ async function processHrefs(hrefs, volumeNumberAndDate, options) {
           }
 
           const body = articleDom.window.document.querySelector(
-            '.article-copy'
+            '.article-copy',
           );
 
           // Remove subscriber mask
@@ -92,7 +107,7 @@ async function processHrefs(hrefs, volumeNumberAndDate, options) {
           if (articleMask) body.removeChild(articleMask);
 
           // If there's images, correctly load them
-          body.querySelectorAll('img').forEach(img => {
+          body.querySelectorAll('img').forEach((img) => {
             const srcset = img.getAttribute('data-srcset');
             img.src = `http://www.lrb.co.uk${srcset}`;
           });
@@ -102,15 +117,15 @@ async function processHrefs(hrefs, volumeNumberAndDate, options) {
           dom.window.document.body.innerHTML = innerHTMLWithArticle;
         }
       })
-      .catch(err => handleError(err));
+      .catch((err) => handleError(err));
   }
 
   fs.writeFile(
     `output/lrb/${publicationName} - ${volumeNumberAndDate}.html`,
     dom.window.document.body.innerHTML,
-    err => {
+    (err) => {
       if (err) throw err;
-    }
+    },
   );
 
   console.log('Fetching complete!');
@@ -122,7 +137,7 @@ async function processHrefs(hrefs, volumeNumberAndDate, options) {
   };
 }
 
-async function lrbParser(issueUrl) {
+export default async function lrbParser(issueUrl: string) {
   const headers = {
     cookie,
   };
@@ -130,10 +145,14 @@ async function lrbParser(issueUrl) {
   const options = getOptions({ headers, issueUrl });
 
   // Get list of articles
-  return fetchContent(issueUrl, options).then(result => {
+  return fetchContent(issueUrl, options).then((result) => {
+    if (!result) {
+      throw new Error('fetchContent error!');
+    }
+
     const firstDateSplit = result.split(`<div class="toc-cover-titles">`);
     const secondDateSplit = firstDateSplit[1].split(
-      `</div><div class="toc-cover-artist">`
+      `</div><div class="toc-cover-artist">`,
     );
     const dateDom = new JSDOM(`<!DOCTYPE html>`);
 
@@ -144,18 +163,20 @@ async function lrbParser(issueUrl) {
     const volumeNumberAndDate = div.firstChild.textContent;
 
     const firstSplit = result.split(`<div class="toc-content-holder">`);
+
     const secondSplit = firstSplit[1].split(
-      `</div><div class="toc-cover-artist toc-cover-artist--footer" aria-hidden="true">`
+      `</div><div class="toc-cover-artist toc-cover-artist--footer" aria-hidden="true">`,
     );
 
     const dom = new JSDOM(`<!DOCTYPE html>`);
     dom.window.document.body.innerHTML = secondSplit[0];
 
     const linksDiv = dom.window.document.body.querySelector('.toc-grid-items');
-    const hrefs = Array.from(linksDiv.childNodes).map(link => link.href);
+
+    const childNodes = <HTMLAnchorElement[]>Array.from(linksDiv.childNodes);
+
+    const hrefs = Array.from(childNodes).map((link) => link.href);
 
     return processHrefs(hrefs, volumeNumberAndDate, options);
   });
 }
-
-module.exports = lrbParser;

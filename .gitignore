@@ -1,3 +1,7 @@
 env.js
+env.ts
 .draft
 .progress-estimator
+
+src/env.ts
+lib/env.js
