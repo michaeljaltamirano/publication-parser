@@ -9,12 +9,15 @@ import {
   handleError,
 } from '../utils';
 
-let volumeNumberAndDate: string;
 const publicationName = "Harper's Magazine";
 // const cookie = "wordpress_logged_in_XXX=XXX";
 const { harpersCookie: cookie } = ENV;
 
-async function processHrefs(hrefs: string[], options: object) {
+async function processHrefs(
+  hrefs: string[],
+  volumeNumberAndDate: string,
+  options: ReturnType<typeof getOptions>,
+) {
   const dom = new JSDOM(`<!DOCTYPE html>`);
   dom.window.document.body.innerText = `<h1>${publicationName} ${volumeNumberAndDate}</h1>`;
 
@@ -42,79 +45,83 @@ async function processHrefs(hrefs: string[], options: object) {
           '.article-layout-featured',
         );
 
-        if (articleLayoutFeature) {
-          const featureLayoutHeader = <HTMLElement>(
-            articleLayoutFeature.querySelector('.title-header.mobile')
-          );
+        // TODO: Download this too
+        const harpersIndex = articleDom.window.document.querySelector(
+          '.post-type-archive-index',
+        );
 
-          const category = <HTMLElement>(
-            featureLayoutHeader.querySelector('.category')
-          );
+        const findings = articleDom.window.document.querySelector(
+          '.article-layout-finding',
+        );
+
+        if (articleLayoutFeature) {
+          const featureLayoutHeader = articleLayoutFeature.querySelector(
+            '.title-header.mobile',
+          ) as HTMLElement;
+
+          const category = featureLayoutHeader.querySelector(
+            '.category',
+          ) as HTMLElement;
           const categoryText = category.textContent;
-          const byline = <HTMLElement>(
-            featureLayoutHeader.querySelector('.byline').querySelector('a')
-          );
+          const byline = featureLayoutHeader.querySelector(
+            '.byline',
+          ) as HTMLElement;
+          const bylineLink = byline.querySelector('a') as HTMLElement;
+          const author = bylineLink.textContent;
           const articleTitle = featureLayoutHeader.querySelector(
             '.article-title',
-          );
-          const author = byline.textContent;
+          ) as HTMLElement;
           const subheading = featureLayoutHeader.querySelector('.subheading');
           const subheadingMarkup = subheading?.outerHTML || '';
 
-          const picture = <HTMLElement>featureLayoutHeader.nextElementSibling;
+          const picture = featureLayoutHeader.nextElementSibling as HTMLElement;
           const pictureMarkup = picture?.outerHTML || '';
-
-          // const content = <NodeListOf<HTMLElement>>(
-          //   articleDom.window.document.querySelectorAll('.wysiwyg-content')
-          // );
-
-          // const combinedContent = Array.from(content).reduce(
-          //   (article, contentBlock) => {
-          //     article += contentBlock.outerHTML;
-          //     return article;
-          //   },
-          //   '',
-          // );
 
           const flexSections = articleLayoutFeature.querySelector(
             '.flex-sections',
-          );
+          ) as HTMLElement;
 
           // Fix img src path
           const images = flexSections.querySelectorAll('img');
           images.forEach((img) => {
-            console.log('what is imgsrc', img.src);
             const oldSource = img.src;
-            img.src = `https://www.harpers.org${oldSource}`;
+            img.src = `https://www.harpers.orgflexSections${oldSource}`;
           });
 
-          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<div class="article-container"><div>${categoryText}</div>${articleTitle.outerHTML}<div>${author}</div><div>${subheadingMarkup}</div>${picture.outerHTML}${flexSections.outerHTML}</div>`);
-        } else if (articleLayoutSimple) {
-          const simpleLayoutHeader = <HTMLElement>(
-            articleLayoutSimple.querySelector('.article-header')
-          );
+          // Remove sidebar ad content
+          const sidebars = flexSections.querySelectorAll(
+            '.col-md-4',
+          ) as NodeListOf<HTMLElement>;
+          sidebars.forEach((sidebar) => sidebar.remove());
 
-          const category = <HTMLElement>(
-            simpleLayoutHeader.querySelector('.category')
-          );
+          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<div class="article-container"><div>${categoryText}</div>${articleTitle.outerHTML}<div>${author}</div><div>${subheadingMarkup}</div>${pictureMarkup}${flexSections.outerHTML}</div>`);
+        } else if (articleLayoutSimple) {
+          const simpleLayoutHeader = articleLayoutSimple.querySelector(
+            '.article-header',
+          ) as HTMLElement;
+
+          const category = simpleLayoutHeader.querySelector(
+            '.category',
+          ) as HTMLElement;
           const categoryText = category.textContent;
-          const title = <HTMLElement>simpleLayoutHeader.querySelector('.title');
+          const title = simpleLayoutHeader.querySelector(
+            '.title',
+          ) as HTMLElement;
           const byline = simpleLayoutHeader.querySelector('.byline') as
             | HTMLElement
             | undefined;
 
           const author = byline?.innerText || '';
 
-          const content = <NodeListOf<HTMLElement>>(
-            articleLayoutSimple.querySelectorAll('.wysiwyg-content')
-          );
+          const content = articleLayoutSimple.querySelectorAll(
+            '.wysiwyg-content',
+          ) as NodeListOf<HTMLElement>;
 
           // Fix img src path
           content.forEach((contentBlock) => {
             const images = contentBlock.querySelectorAll('img');
 
             images.forEach((img) => {
-              console.log('what is imgsrc', img.src);
               const oldSource = img.src;
               img.src = `https://www.harpers.org${oldSource}`;
             });
@@ -129,6 +136,26 @@ async function processHrefs(hrefs: string[], options: object) {
           );
 
           return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<div class="article-container"><div>${categoryText}</div><div>${title.outerHTML}</div><div>${author}</div><div>${combinedContent}</div></div>`);
+        } else if (harpersIndex) {
+          const heading = harpersIndex.querySelector('h1');
+          const headingMarkup = heading?.outerHTML || '';
+          const body = harpersIndex.querySelector('.page-container');
+
+          if (!body) {
+            throw new Error(`Harper's Index error!`);
+          }
+
+          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<div class="article-container">${headingMarkup}${body.outerHTML}</div>`);
+        } else if (findings) {
+          const content = findings.querySelector('.flex-sections');
+
+          if (!content) {
+            throw new Error('Findings error!');
+          }
+
+          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<div class="article-container"><${content.outerHTML}</div>`);
+        } else {
+          throw new Error('Unresolved path!');
         }
       })
       .catch((error) => handleError(error));
@@ -169,26 +196,34 @@ export default async function harpersParser(issueUrl: string) {
 
     const dom = new JSDOM(result);
 
-    const readingsLinks = <NodeListOf<HTMLAnchorElement>>(
-      dom.window.document
-        .querySelector('.issue-readings')
-        .querySelectorAll('a.ac-title')
-    );
+    const readings = dom.window.document.querySelector(
+      '.issue-readings',
+    ) as HTMLElement;
+
+    const readingsLinks = readings.querySelectorAll('a.ac-title') as NodeListOf<
+      HTMLAnchorElement
+    >;
+
     const readingsHrefs = Array.from(readingsLinks).map((a) => a.href);
 
-    const articleLinks = <NodeListOf<HTMLAnchorElement>>(
-      dom.window.document
-        .querySelector('.issue-articles')
-        .querySelectorAll('a:not([rel="author"])')
-    );
+    const articles = dom.window.document.querySelector(
+      '.issue-articles',
+    ) as HTMLElement;
+
+    const articleLinks = articles.querySelectorAll(
+      'a:not([rel="author"])',
+    ) as NodeListOf<HTMLAnchorElement>;
+
     const articleHrefs = Array.from(
       new Set(Array.from(articleLinks).map((a) => a.href)),
     );
 
     const hrefs = [...readingsHrefs, ...articleHrefs];
 
-    volumeNumberAndDate = dom.window.document.querySelector('h1').innerHTML;
+    const header = dom.window.document.querySelector('h1') as HTMLElement;
 
-    return processHrefs(hrefs, options);
+    const volumeNumberAndDate = header.innerHTML;
+
+    return processHrefs(hrefs, volumeNumberAndDate, options);
   });
 }

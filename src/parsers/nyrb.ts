@@ -9,12 +9,15 @@ import {
   handleError,
 } from '../utils';
 
-let volumeNumberAndDate;
 const publicationName = 'The New York Review of Books';
 // const cookie = "wordpress_logged_in_XXX=XXX";
 const { nyrbCookie: cookie } = ENV;
 
-async function processHrefs(hrefs: string[], options: any) {
+async function processHrefs(
+  hrefs: string[],
+  volumeNumberAndDate: string,
+  options: any,
+) {
   const dom = new JSDOM(`<!DOCTYPE html>`);
   dom.window.document.body.innerText = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
 
@@ -26,7 +29,7 @@ async function processHrefs(hrefs: string[], options: any) {
         if (!result) {
           throw new Error('fetchContent error!');
         }
-        
+
         const articleDom = new JSDOM(result);
 
         const paywall = articleDom.window.document.querySelector('.paywall');
@@ -35,13 +38,22 @@ async function processHrefs(hrefs: string[], options: any) {
 
         const article = articleDom.window.document.querySelector(
           'article.article',
-        );
+        ) as HTMLElement;
 
-        const header = article.querySelector('header');
-        const body = article.querySelector('section.article_body');
+        const header = article.querySelector('header') as HTMLElement;
+        const body = article.querySelector(
+          'section.article_body',
+        ) as HTMLElement;
+
+        if (!body) {
+          throw new Error('No article body!');
+        }
 
         // remove timestamp
-        article.querySelector('article > header > .details').innerHTML = '';
+        const timestamp = article.querySelector(
+          'article > header > .details',
+        ) as HTMLElement;
+        timestamp.innerHTML = '';
 
         // remove amazon links and publishing info
         const reviewedItems = body.querySelector('.reviewed_articles');
@@ -117,7 +129,7 @@ export default async function nyrbParser(issueUrl: string) {
 
     const dom = new JSDOM(result);
     const tableOfContentsH2s = dom.window.document.querySelectorAll('h2');
-    let hrefs = [];
+    const hrefs: string[] = [];
 
     tableOfContentsH2s.forEach((h2) => {
       const a = h2.querySelector('a');
@@ -126,9 +138,11 @@ export default async function nyrbParser(issueUrl: string) {
       }
     });
 
-    volumeNumberAndDate = dom.window.document.querySelector('time').innerHTML;
+    const time = dom.window.document.querySelector('time') as HTMLElement;
 
-    return processHrefs(hrefs, options);
+    const volumeNumberAndDate = time.innerHTML;
+
+    return processHrefs(hrefs, volumeNumberAndDate, options);
   });
 }
 

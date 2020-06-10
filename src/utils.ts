@@ -6,7 +6,10 @@ export function fetchContent(url: string, options: { [key: string]: any }) {
     .catch((err) => console.log('err', err));
 }
 
-export function fetchContentArrayBuffer(url: string, options: any) {
+export function fetchContentArrayBuffer(
+  url: string,
+  options: { [key: string]: any },
+) {
   return nodeFetch(url, options)
     .then((res) =>
       res.arrayBuffer().then((ab) => {
@@ -41,7 +44,7 @@ export function getOptions({
 
 export function throwCookieError() {
   throw new Error(
-    '\033[31mYOUR COOKIES HAVE EXPIRED! Please reset them to get the full article content',
+    '\0o33[31mYOUR COOKIES HAVE EXPIRED! Please reset them to get the full article content',
   );
 }
 

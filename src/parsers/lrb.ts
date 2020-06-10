@@ -17,7 +17,7 @@ const { lrbCookie: cookie } = ENV;
 async function processHrefs(
   hrefs: string[],
   volumeNumberAndDate: string,
-  options: object,
+  options: ReturnType<typeof getOptions>,
 ) {
   const dom = new JSDOM(`<!DOCTYPE html>`);
 
@@ -54,14 +54,14 @@ async function processHrefs(
         if (lettersHeader) {
           const letters = articleDom.window.document.getElementById(
             'lrb-lettersCopy',
-          );
+          ) as HTMLElement;
 
-          const lettersHeaderFirstChild = <HTMLElement>lettersHeader.firstChild;
+          const lettersHeaderFirstChild = lettersHeader.firstChild as HTMLElement;
 
           return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<h1>${lettersHeaderFirstChild.innerHTML}</h1><div>${letters.innerHTML}</div><br>End Letters<br>`);
         } else if (articleHeader) {
-          const h1 = articleHeader.firstChild.textContent;
-          const h2 = articleHeader.lastChild.textContent;
+          const h1 = articleHeader?.firstChild?.textContent;
+          const h2 = articleHeader?.lastChild?.textContent;
           const reviewedItemsHolder = articleDom.window.document.querySelector(
             '.reviewed-items-holder',
           );
@@ -70,9 +70,9 @@ async function processHrefs(
           };
 
           if (reviewedItemsHolder) {
-            const reviewedItems = <HTMLElement>(
-              articleDom.window.document.querySelector('.reviewed-items')
-            );
+            const reviewedItems = articleDom.window.document.querySelector(
+              '.reviewed-items',
+            ) as HTMLElement;
 
             if (reviewedItems) {
               // Remove show more link
@@ -84,13 +84,20 @@ async function processHrefs(
                 showMores.forEach((showMoreLink) => showMoreLink.remove());
 
               // Clean info
-              reviewedItems.childNodes.forEach((review: HTMLElement) => {
-                const by = review.querySelector('.by');
-                const meta = by.querySelector('.item-meta');
+              const reviewedItemsChildNodes = reviewedItems.childNodes as NodeListOf<
+                HTMLElement
+              >;
 
-                // If there's book info, remove it
-                if (meta.querySelector('.nowrap')) {
-                  by.removeChild(meta);
+              reviewedItemsChildNodes.forEach((review) => {
+                const by = review.querySelector('.by');
+
+                if (by) {
+                  const meta = by.querySelector('.item-meta');
+
+                  // If there's book info, remove it
+                  if (meta && meta.querySelector('.nowrap')) {
+                    by.removeChild(meta);
+                  }
                 }
               });
 
@@ -100,7 +107,7 @@ async function processHrefs(
 
           const body = articleDom.window.document.querySelector(
             '.article-copy',
-          );
+          ) as HTMLElement;
 
           // Remove subscriber mask
           const articleMask = body.querySelector('.article-mask');
@@ -114,7 +121,9 @@ async function processHrefs(
 
           const innerHTMLWithArticle = `${dom.window.document.body.innerHTML}<div><h1>${h1}</h1><h2>${h2}</h2></div><div>${reviewedItemsContent.innerHTML}</div><div>${body.innerHTML}</div><br>End Article<br>`;
 
-          dom.window.document.body.innerHTML = innerHTMLWithArticle;
+          return (dom.window.document.body.innerHTML = innerHTMLWithArticle);
+        } else {
+          throw new Error('Unresolved path!');
         }
       })
       .catch((err) => handleError(err));
@@ -158,9 +167,12 @@ export default async function lrbParser(issueUrl: string) {
 
     dateDom.window.document.body.innerHTML = `<div id="date-and-volume">${secondDateSplit[0]}</div>`;
 
-    const div = dateDom.window.document.getElementById('date-and-volume');
+    const dateAndVolume = dateDom.window.document.getElementById(
+      'date-and-volume',
+    ) as HTMLElement;
 
-    const volumeNumberAndDate = div.firstChild.textContent;
+    const volumeNumberAndDate =
+      dateAndVolume?.firstChild?.textContent || new Date().toLocaleDateString();
 
     const firstSplit = result.split(`<div class="toc-content-holder">`);
 
@@ -171,7 +183,9 @@ export default async function lrbParser(issueUrl: string) {
     const dom = new JSDOM(`<!DOCTYPE html>`);
     dom.window.document.body.innerHTML = secondSplit[0];
 
-    const linksDiv = dom.window.document.body.querySelector('.toc-grid-items');
+    const linksDiv = dom.window.document.body.querySelector(
+      '.toc-grid-items',
+    ) as HTMLElement;
 
     const childNodes = <HTMLAnchorElement[]>Array.from(linksDiv.childNodes);
 

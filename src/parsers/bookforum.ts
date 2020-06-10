@@ -10,6 +10,10 @@ import {
   handleError,
 } from '../utils';
 
+const isNotNull = <T>(val: T | null): val is T => {
+  return val !== null;
+};
+
 const publicationName = 'Bookforum';
 // const cookie = "bfsid=XXX; login=XXX";
 const { bookforumCookie: cookie } = ENV;
@@ -17,7 +21,7 @@ const { bookforumCookie: cookie } = ENV;
 async function processHrefs(
   hrefs: string[],
   volumeNumberAndDate: string,
-  options: object,
+  options: ReturnType<typeof getOptions>,
 ) {
   const dom = new JSDOM(`<!DOCTYPE html>`);
   dom.window.document.body.innerHTML = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
@@ -41,9 +45,9 @@ async function processHrefs(
 
         if (isPaywalled) throwCookieError();
 
-        const article = <HTMLElement>(
-          articleDom.window.document.querySelector('.blog-article')
-        );
+        const article = articleDom.window.document.querySelector(
+          '.blog-article',
+        ) as HTMLElement;
 
         if (article) {
           // Clear cruft: purchase links, social share links, anchor link formatting
@@ -53,8 +57,13 @@ async function processHrefs(
           article
             .querySelectorAll('af-share-toggle')
             .forEach((el) => (el.innerHTML = ''));
-          article.querySelectorAll('a.share').forEach((el: HTMLElement) => {
-            const parentNode = <HTMLElement>el.parentNode;
+
+          const shareLinks = article.querySelectorAll('a.share') as NodeListOf<
+            HTMLElement
+          >;
+
+          shareLinks.forEach((el) => {
+            const parentNode = el.parentNode as HTMLElement;
 
             if (parentNode.innerHTML) {
               parentNode.innerHTML = el.innerHTML;
@@ -69,6 +78,8 @@ async function processHrefs(
           const articleString = `${dom.window.document.body.innerHTML}<div class="article-container">${article.innerHTML}</div>`;
 
           dom.window.document.body.innerHTML = articleString;
+        } else {
+          throw new Error('Unresolved path!');
         }
       })
       .catch((err) => handleError(err));
@@ -106,26 +117,31 @@ export default async function bookforumParser(issueUrl: string) {
 
     const dom = new JSDOM(result);
 
-    const articleLinks = <NodeListOf<HTMLAnchorElement>>(
-      dom.window.document.querySelectorAll('.toc-article__link')
-    );
+    const articleLinks = dom.window.document.querySelectorAll(
+      '.toc-article__link',
+    ) as NodeListOf<HTMLAnchorElement>;
 
     // Clear duplicate links for feature headings
     const hrefs = Array.from(
       new Set(
-        Array.from(articleLinks).map((article) => {
-          // Safe check to confirm article is HTMLAnchorElement
-          if (article.href) {
-            return article.href;
-          }
-        }),
+        Array.from(articleLinks)
+          .map((article) => {
+            // Safe check to confirm article is HTMLAnchorElement
+            if (article.href) {
+              return article.href;
+            }
+
+            return null;
+          })
+          .filter(isNotNull),
       ),
     );
 
+    const tocTitle = dom.window.document.querySelector('.toc-issue__title');
+    const titleContent = tocTitle?.textContent || '';
+
     // Cleans bookforum format--"Sep/Oct/Nov"--since those aren't directories
-    const volumeNumberAndDate = dom.window.document
-      .querySelector('.toc-issue__title')
-      .textContent.replace(/\//g, '-');
+    const volumeNumberAndDate = titleContent.replace(/\//g, '-');
 
     return processHrefs(hrefs, volumeNumberAndDate, options);
   });

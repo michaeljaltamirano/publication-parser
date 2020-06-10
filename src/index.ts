@@ -7,6 +7,7 @@ import nyrbParser from './parsers/nyrb';
 import bookforumParser from './parsers/bookforum';
 import createLogger from 'progress-estimator';
 import ENV from './env';
+
 const {
   email: { recipient, sender, twoFactorPassword },
 } = ENV;
@@ -68,7 +69,18 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-async function send(mailOptions: object) {
+type MailOptions = {
+  from: string;
+  to: string;
+  subject: string;
+  attachments: {
+    filename: string;
+    content: string;
+    contentType: string;
+  }[];
+};
+
+async function send(mailOptions: MailOptions) {
   const emailSentMsg = await transporter
     .sendMail(mailOptions)
     .then((info) => console.log('Email sent: ' + info.response))
@@ -77,7 +89,7 @@ async function send(mailOptions: object) {
   console.log(emailSentMsg);
 }
 
-async function sendEmail(mailOptions: object, logger: any) {
+async function sendEmail(mailOptions: MailOptions, logger: any) {
   await logger(send(mailOptions), 'Sending email now', 4000);
 }
 
