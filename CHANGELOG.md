@@ -1,4 +1,10 @@
-### 0.10.0
+# 0.11.0
+
+- [Internal] Add TypeScript compilation step for script source code
+- [Dependencies] Bump all dependencies to most up-to-date version
+- [Internal] Convert `.eslintrc` to `.eslintrc.js`, expand configuration (to include TypeScript). ### 0.10.0
+
+# 0.10.0
 
 - [Parsers] Fix bug in London Review of Books parser [(#49)](https://github.com/mjaltamirano/publication-parser/pull/49)
 - [Internal] Replace `npm` with `yarn`. [(#49)](https://github.com/mjaltamirano/publication-parser/pull/49)

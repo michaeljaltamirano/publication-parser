@@ -52,6 +52,9 @@
       "yarn prettier -- --write",
       "yarn eslint --fix",
       "yarn run tsc"
+    ],
+    "*.md": [
+      "yarn prettier -- --write"
     ]
   }
 }
