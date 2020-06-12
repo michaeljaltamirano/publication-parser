@@ -1,3 +1,8 @@
+# 0.11.0
+
+- [Internal] Add TypeScript compilation step for script source code
+- [Dependencies] Bump all dependencies to most up-to-date version
+
 ### 0.10.0
 
 - [Parsers] Fix bug in London Review of Books parser [(#49)](https://github.com/mjaltamirano/publication-parser/pull/49)
