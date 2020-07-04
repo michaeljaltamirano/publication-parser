@@ -60,8 +60,6 @@ async function processHrefs(
   const dom = new JSDOM(`<!DOCTYPE html>`);
   dom.window.document.body.outerHTML = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
 
-  dom.window.document.body.outerHTML = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
-
   for (const href of hrefs) {
     // Get articles
     console.log(`Fetching: ${href}`);
