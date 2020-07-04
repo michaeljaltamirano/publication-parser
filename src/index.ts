@@ -7,6 +7,7 @@ import nyrbParser from './parsers/nyrb';
 import bookforumParser from './parsers/bookforum';
 import createLogger from 'progress-estimator';
 import ENV from './env';
+import tlsParser from './parsers/tls';
 
 const {
   email: { recipient, sender, twoFactorPassword },
@@ -55,6 +56,13 @@ function getPublicationInfo(input: number): GetPublicationInfoReturnType {
         publicationParser: bookforumParser,
         shorthand: 'bookforum',
       };
+    case 5:
+      return {
+        exampleUrl:
+          'https://www.the-tls.co.uk/issues/june-26-2020/, or https://www.the-tls.co.uk/issues/current-issue-2-2/ for current issue',
+        publicationParser: tlsParser,
+        shorthand: 'The Times Literary Supplement',
+      };
     default:
       throw new Error('Publication not found');
   }
@@ -94,7 +102,7 @@ async function sendEmail(mailOptions: MailOptions, logger: any) {
 }
 
 rl.question(
-  "Please enter the number associated with the publication you would like to scrape: \n  1 - LRB \n  2 - NYRB \n  3 - Harper's \n  4 - Bookforum \n\n  Answer: ",
+  "Please enter the number associated with the publication you would like to scrape: \n  1 - LRB \n  2 - NYRB \n  3 - Harper's \n  4 - Bookforum \n  5 - The Times Literary Supplement \n\n  Answer: ",
   (input) => {
     const { exampleUrl, publicationParser, shorthand } = getPublicationInfo(
       parseInt(input),
