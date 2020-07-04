@@ -19,7 +19,7 @@ async function processHrefs(
   options: any,
 ) {
   const dom = new JSDOM(`<!DOCTYPE html>`);
-  dom.window.document.body.innerText = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
+  dom.window.document.body.innerHTML = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
 
   for (const href of hrefs) {
     // Get articles
@@ -145,5 +145,3 @@ export default async function nyrbParser(issueUrl: string) {
     return processHrefs(hrefs, volumeNumberAndDate, options);
   });
 }
-
-module.exports = nyrbParser;
