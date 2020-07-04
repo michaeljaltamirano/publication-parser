@@ -10,6 +10,6 @@ Parsers are up-to-date as of July 2020:
 1. Bookforum (updated for May 2019 website change)
 1. The Times Literary Supplement
 
-The script requires Node 8 or greater (for async/await) and a lib/env.js file with the necessary cookie and email information. I've included example formatting in each of the respective parser files. I pulled the information using a browser's dev tools network tab. Required dependencies can be installed via `yarn install`.
+The script requires Node 8 or greater (for async/await) and a `lib/env.js` file with the necessary cookie and email information. I've included example formatting in each of the respective parser files. I pulled the information using a browser's dev tools network tab. Required dependencies can be installed via `yarn install`.
 
-I created this application to import writing into a text-to-speech application. I welcome contributions for supporting additional publications.
+I created this application to import writing into a text-to-speech application. I welcome contributions for supporting additional publications. Development is done in TypeScript in the `/src` directory.
