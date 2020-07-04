@@ -1,3 +1,7 @@
+# 0.12.1
+
+- [Bugfix] Fix error terminal output color [(#4)](https://github.com/michaeljaltamirano/publication-parser/pull/4)
+
 # 0.12.0
 
 - [Parsers] Add Times Literary Supplement Support [(#3)](https://github.com/michaeljaltamirano/publication-parser/pull/3)
