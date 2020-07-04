@@ -44,7 +44,7 @@ export function getOptions({
 
 export function throwCookieError() {
   throw new Error(
-    '\033[31mYOUR COOKIES HAVE EXPIRED! Please reset them to get the full article content',
+    '\x1B[31mYOUR COOKIES HAVE EXPIRED! Please reset them to get the full article content',
   );
 }
 
