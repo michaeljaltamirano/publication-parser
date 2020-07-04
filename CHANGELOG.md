@@ -1,3 +1,7 @@
+# 0.12.2
+
+- [Bugfix] Use hexidecimal escape instead of octal escape [(#5)](https://github.com/michaeljaltamirano/publication-parser/pull/5)
+
 # 0.12.1
 
 - [Bugfix] Fix error terminal output color [(#4)](https://github.com/michaeljaltamirano/publication-parser/pull/4)
