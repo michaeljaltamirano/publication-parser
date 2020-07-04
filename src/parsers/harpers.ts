@@ -19,7 +19,7 @@ async function processHrefs(
   options: ReturnType<typeof getOptions>,
 ) {
   const dom = new JSDOM(`<!DOCTYPE html>`);
-  dom.window.document.body.innerText = `<h1>${publicationName} ${volumeNumberAndDate}</h1>`;
+  dom.window.document.body.innerHTML = `<h1>${publicationName} ${volumeNumberAndDate}</h1>`;
 
   for (const href of hrefs) {
     // Get articles

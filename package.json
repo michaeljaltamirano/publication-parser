@@ -1,8 +1,8 @@
 {
   "name": "publication-parser",
-  "version": "0.9.0",
+  "version": "0.12.0",
   "description": "Parses the written content of various publications",
-  "main": "index.js",
+  "main": "lib/index.js",
   "scripts": {
     "prettier": "prettier",
     "eslint": "eslint",
@@ -31,7 +31,7 @@
     "@types/node": "^14.0.13",
     "eslint": "^7.2.0",
     "husky": "^4.2.5",
-    "lint-staged": "^10.2.9",
+    "lint-staged": "^10.2.10",
     "prettier": "^2.0.5",
     "typescript": "^3.9.5"
   },
@@ -39,22 +39,5 @@
     "hooks": {
       "pre-commit": "lint-staged"
     }
-  },
-  "lint-staged": {
-    "*.js": [
-      "yarn prettier -- --write",
-      "yarn eslint --fix"
-    ],
-    "!(tsconfig).json": [
-      "yarn prettier -- --write"
-    ],
-    "*.ts": [
-      "yarn prettier -- --write",
-      "yarn eslint --fix",
-      "yarn run tsc"
-    ],
-    "*.md": [
-      "yarn prettier -- --write"
-    ]
   }
 }
