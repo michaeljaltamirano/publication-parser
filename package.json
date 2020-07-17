@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/mjaltamirano/publication-parser#readme",
   "dependencies": {
+    "~": "file:.",
     "@types/jsdom": "^16.2.3",
     "@types/node-fetch": "^2.5.7",
     "@types/nodemailer": "^6.4.0",
