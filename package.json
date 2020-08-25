@@ -22,7 +22,7 @@
     "@types/node-fetch": "^2.5.7",
     "@types/nodemailer": "^6.4.0",
     "@typescript-eslint/eslint-plugin": "^3.2.0",
-    "@typescript-eslint/parser": "^3.2.0",
+    "@typescript-eslint/parser": "^3.10.1",
     "jsdom": "^16.2.2",
     "node-fetch": "^2.6.0",
     "nodemailer": "^6.4.8",
