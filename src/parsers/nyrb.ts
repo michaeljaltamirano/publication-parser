@@ -16,7 +16,7 @@ const { nyrbCookie: cookie } = ENV;
 async function processHrefs(
   hrefs: string[],
   volumeNumberAndDate: string,
-  options: any,
+  options: Record<string, unknown>,
 ) {
   const dom = new JSDOM(`<!DOCTYPE html>`);
   dom.window.document.body.innerHTML = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
@@ -36,63 +36,78 @@ async function processHrefs(
 
         if (paywall) throwCookieError();
 
-        const article = articleDom.window.document.querySelector(
-          'article.article',
-        ) as HTMLElement;
+        const header = articleDom.window.document.querySelector<
+          HTMLHeadingElement
+        >('header.article-header');
 
-        const header = article.querySelector('header') as HTMLElement;
-        const body = article.querySelector(
-          'section.article_body',
-        ) as HTMLElement;
+        if (!header) {
+          throw new Error('parse error');
+        }
+
+        const title = header.querySelector('h1');
+        const author = header.querySelector<HTMLElement>('div.author');
+        const dek = header.querySelector<HTMLElement>('div.dek:not(.author)');
+
+        const titleAndAuthorMarkup = `<heading>${
+          title?.outerHTML || ''
+        }</heading><h2>${author?.textContent || ''}</h2><h3>${
+          dek?.outerHTML || ''
+        }</h3>`;
+
+        const article = articleDom.window.document.querySelector<HTMLElement>(
+          'article.article',
+        );
+
+        if (!article) {
+          throw new Error('parse error');
+        }
+
+        const reviewedItems = article.querySelector('.review-items');
+
+        // The only content we're interested in is in the first div.row in <article>
+        const firstRow = article.querySelector('.row');
+
+        if (!firstRow) {
+          throw new Error('parse error');
+        }
+
+        /**
+         * Includes:
+         *
+         * 1. Letters to the editors "In response to:" preface
+         * 2. Any preface ("addendum") to the article body (e.g. "This article is part of...")
+         * 3. Article body
+         */
+        const body = firstRow.querySelectorAll<HTMLElement>('div.article-col');
 
         if (!body) {
           throw new Error('No article body!');
         }
 
-        // remove timestamp
-        const timestamp = article.querySelector(
-          'article > header > .details',
-        ) as HTMLElement;
-        timestamp.innerHTML = '';
+        const bodyMarkup = Array.from(body).reduce((acc, markup) => {
+          const nodes = Array.from(markup.childNodes) as HTMLElement[];
 
-        // remove amazon links and publishing info
-        const reviewedItems = body.querySelector('.reviewed_articles');
+          acc = nodes.reduce((acc, node) => {
+            if (
+              !node.outerHTML ||
+              (node.classList &&
+                Array.from(node.classList).includes('inline-ad'))
+            )
+              return acc;
 
-        if (reviewedItems) {
-          reviewedItems.querySelectorAll('article').forEach((article) => {
-            const h4 = article.querySelector('h4');
-            const details = article.querySelector('.details');
+            return (acc += node.outerHTML);
+          }, '');
 
-            if (h4) {
-              const a = h4.querySelector('a');
+          return acc;
+        }, '');
 
-              if (a) {
-                const itemInfo = a.innerText;
-                h4.removeChild(a);
-                const item = articleDom.window.document.createElement('b');
-                item.innerText = itemInfo;
-                article.prepend(item);
-              }
-            }
+        const authorInfo = article.querySelector('.author-info > p');
 
-            if (details) {
-              article.removeChild(details);
-            }
-          });
-        }
-
-        // Remove list item span numbers
-        const footnotes = article.querySelector('.footnotes');
-
-        if (footnotes) {
-          footnotes.querySelectorAll('li').forEach((listItem) => {
-            const span = listItem.querySelector('span');
-
-            if (span) listItem.removeChild(span);
-          });
-        }
-
-        return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<div class="article-container">${header.innerHTML}${body.innerHTML}</div>`);
+        return (dom.window.document.body.innerHTML = `${
+          dom.window.document.body.innerHTML
+        }<div class="article-container">${titleAndAuthorMarkup}${
+          reviewedItems?.outerHTML || ''
+        }${bodyMarkup}${authorInfo?.outerHTML || ''}</div>`);
       })
       .catch((error) => handleError(error));
   }
@@ -128,20 +143,19 @@ export default async function nyrbParser(issueUrl: string) {
     }
 
     const dom = new JSDOM(result);
-    const tableOfContentsH2s = dom.window.document.querySelectorAll('h2');
-    const hrefs: string[] = [];
+    const tableOfContentsLinks = dom.window.document.querySelectorAll<
+      HTMLAnchorElement
+    >('a[href*="nybooks.com/articles"]');
+    const hrefs = Array.from(tableOfContentsLinks).map((link) => link.href);
 
-    tableOfContentsH2s.forEach((h2) => {
-      const a = h2.querySelector('a');
-      if (a) {
-        hrefs.push(a.href);
-      }
-    });
+    const date = dom.window.document.querySelector<HTMLElement>(
+      'header.issue_header > p.h2',
+    )?.textContent;
 
-    const time = dom.window.document.querySelector('time') as HTMLElement;
+    if (!date) {
+      throw new Error('Issue date parsing error');
+    }
 
-    const volumeNumberAndDate = time.innerHTML;
-
-    return processHrefs(hrefs, volumeNumberAndDate, options);
+    return processHrefs(hrefs, date, options);
   });
 }
