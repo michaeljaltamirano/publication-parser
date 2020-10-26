@@ -55,7 +55,7 @@ const getHeadingDetails = (details: ArticleBody) => {
 async function processHrefs(
   hrefs: string[],
   volumeNumberAndDate: string,
-  options: any,
+  options: Record<string, unknown>,
 ) {
   const dom = new JSDOM(`<!DOCTYPE html>`);
   dom.window.document.body.outerHTML = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
@@ -283,6 +283,16 @@ export default async function tlsParser(issueUrl: string) {
 
     const volumeNumberAndDate = `${issuedate} - ${issuenumber}`;
 
-    return processHrefs(hrefsNoDuplicates, volumeNumberAndDate, options);
+    // Remove forward slashes from double issues
+    const formattedVolumeNumberAndDate = volumeNumberAndDate.replace(
+      /\//g,
+      '+',
+    );
+
+    return processHrefs(
+      hrefsNoDuplicates,
+      formattedVolumeNumberAndDate,
+      options,
+    );
   });
 }

@@ -24,7 +24,7 @@ type GetPublicationInfoReturnType = {
     issueUrl: string,
   ) => Promise<{
     html: string;
-    volumeNumberAndDate: any;
+    volumeNumberAndDate: unknown;
     publicationName: string;
   }>;
   shorthand: string;
@@ -97,8 +97,11 @@ async function send(mailOptions: MailOptions) {
   console.log(emailSentMsg);
 }
 
-async function sendEmail(mailOptions: MailOptions, logger: any) {
-  await logger(send(mailOptions), 'Sending email now', 4000);
+async function sendEmail(
+  mailOptions: MailOptions,
+  logger: createLogger.ProgressEstimator,
+) {
+  await logger(send(mailOptions), 'Sending email now', { estimate: 4000 });
 }
 
 rl.question(

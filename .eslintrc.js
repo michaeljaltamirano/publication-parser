@@ -8,6 +8,7 @@ module.exports = {
   },
   rules: {
     '@typescript-eslint/explicit-function-return-type': 0,
+    '@typescript-eslint/explicit-module-boundary-types': 0,
     '@typescript-eslint/no-unused-vars': [
       2,
       {
