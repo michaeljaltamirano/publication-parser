@@ -17,24 +17,24 @@
   },
   "homepage": "https://github.com/mjaltamirano/publication-parser#readme",
   "dependencies": {
-    "~": "file:.",
-    "@types/jsdom": "^16.2.3",
+    "@types/jsdom": "^16.2.4",
     "@types/node-fetch": "^2.5.7",
     "@types/nodemailer": "^6.4.0",
-    "@typescript-eslint/eslint-plugin": "^3.2.0",
-    "@typescript-eslint/parser": "^3.2.0",
-    "jsdom": "^16.2.2",
-    "node-fetch": "^2.6.0",
-    "nodemailer": "^6.4.8",
-    "progress-estimator": "https://github.com/bvaughn/progress-estimator#e654f232a5d503d1ad2d17e43fd266366ce92140"
+    "@typescript-eslint/eslint-plugin": "^4.5.0",
+    "@typescript-eslint/parser": "^4.5.0",
+    "jsdom": "^16.4.0",
+    "node-fetch": "^2.6.1",
+    "nodemailer": "^6.4.14",
+    "progress-estimator": "^0.3.0",
+    "~": "file:."
   },
   "devDependencies": {
-    "@types/node": "^14.0.13",
-    "eslint": "^7.2.0",
-    "husky": "^4.2.5",
-    "lint-staged": "^10.2.10",
-    "prettier": "^2.0.5",
-    "typescript": "^3.9.5"
+    "@types/node": "^14.14.2",
+    "eslint": "^7.12.0",
+    "husky": "^4.3.0",
+    "lint-staged": "^10.4.2",
+    "prettier": "^2.1.2",
+    "typescript": "^4.0.3"
   },
   "husky": {
     "hooks": {

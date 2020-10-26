@@ -1,6 +1,6 @@
 import nodeFetch from 'node-fetch';
 
-export function fetchContent(url: string, options: { [key: string]: any }) {
+export function fetchContent(url: string, options: { [key: string]: unknown }) {
   return nodeFetch(url, options)
     .then((res) => res.text())
     .catch((err) => console.log('err', err));
@@ -8,7 +8,7 @@ export function fetchContent(url: string, options: { [key: string]: any }) {
 
 export function fetchContentArrayBuffer(
   url: string,
-  options: { [key: string]: any },
+  options: { [key: string]: unknown },
 ) {
   return nodeFetch(url, options)
     .then((res) =>
