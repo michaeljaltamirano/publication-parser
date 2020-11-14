@@ -58,9 +58,7 @@ async function processHrefs(
             .querySelectorAll('af-share-toggle')
             .forEach((el) => (el.innerHTML = ''));
 
-          const shareLinks = article.querySelectorAll('a.share') as NodeListOf<
-            HTMLElement
-          >;
+          const shareLinks = article.querySelectorAll('a.share');
 
           shareLinks.forEach((el) => {
             const parentNode = el.parentNode as HTMLElement;
@@ -117,9 +115,9 @@ export default async function bookforumParser(issueUrl: string) {
 
     const dom = new JSDOM(result);
 
-    const articleLinks = dom.window.document.querySelectorAll(
-      '.toc-article__link',
-    ) as NodeListOf<HTMLAnchorElement>;
+    const articleLinks = dom.window.document.querySelectorAll<
+      HTMLAnchorElement
+    >('.toc-article__link');
 
     // Clear duplicate links for feature headings
     const hrefs = Array.from(
