@@ -8,6 +8,7 @@ import bookforumParser from './parsers/bookforum';
 import createLogger from 'progress-estimator';
 import ENV from './env';
 import tlsParser from './parsers/tls';
+import SESTransport from 'nodemailer/lib/ses-transport';
 
 const {
   email: { recipient, sender, twoFactorPassword },
@@ -24,7 +25,7 @@ type GetPublicationInfoReturnType = {
     issueUrl: string,
   ) => Promise<{
     html: string;
-    volumeNumberAndDate: unknown;
+    volumeNumberAndDate: string;
     publicationName: string;
   }>;
   shorthand: string;
@@ -91,7 +92,9 @@ type MailOptions = {
 async function send(mailOptions: MailOptions) {
   const emailSentMsg = await transporter
     .sendMail(mailOptions)
-    .then((info) => console.log('Email sent: ' + info.response))
+    .then((info: SESTransport.SentMessageInfo) =>
+      console.log(`Email sent: ${info.response}`),
+    )
     .catch((error) => console.log(error));
 
   console.log(emailSentMsg);
@@ -113,16 +116,21 @@ rl.question(
 
     rl.question(
       `\nPlease enter the full URL for the LRB or NYRB issue you would like to scrape (e.g. ${exampleUrl})\n\n  Answer: `,
-      (issueUrl) => {
-        publicationParser(issueUrl).then((res) => {
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
+      async (issueUrl) => {
+        try {
+          const {
+            html,
+            volumeNumberAndDate,
+            publicationName,
+          } = await publicationParser(issueUrl);
+
           const logger = createLogger({
             storagePath: path.join(
               __dirname,
               `../.progress-estimator/${shorthand}`,
             ),
           });
-
-          const { html, volumeNumberAndDate, publicationName } = res;
 
           const mailOptions = {
             from: sender,
@@ -137,10 +145,15 @@ rl.question(
             ],
           };
 
-          sendEmail(mailOptions, logger);
-        });
+          await sendEmail(mailOptions, logger);
 
-        rl.close();
+          rl.close();
+        } catch (e) {
+          console.error('catch');
+          console.error(e);
+
+          rl.close();
+        }
       },
     );
   },

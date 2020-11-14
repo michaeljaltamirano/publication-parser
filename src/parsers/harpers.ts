@@ -62,12 +62,12 @@ async function processHrefs(
           const category = featureLayoutHeader.querySelector(
             '.category',
           ) as HTMLElement;
-          const categoryText = category.textContent;
+          const categoryText = category.textContent || '';
           const byline = featureLayoutHeader.querySelector(
             '.byline',
           ) as HTMLElement;
           const bylineLink = byline.querySelector('a') as HTMLElement;
-          const author = bylineLink.textContent;
+          const author = bylineLink.textContent || '';
           const articleTitle = featureLayoutHeader.querySelector(
             '.article-title',
           ) as HTMLElement;
@@ -89,9 +89,7 @@ async function processHrefs(
           });
 
           // Remove sidebar ad content
-          const sidebars = flexSections.querySelectorAll(
-            '.col-md-4',
-          ) as NodeListOf<HTMLElement>;
+          const sidebars = flexSections.querySelectorAll('.col-md-4');
           sidebars.forEach((sidebar) => sidebar.remove());
 
           return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<div class="article-container"><div>${categoryText}</div>${articleTitle.outerHTML}<div>${author}</div><div>${subheadingMarkup}</div>${pictureMarkup}${flexSections.outerHTML}</div>`);
@@ -103,7 +101,7 @@ async function processHrefs(
           const category = simpleLayoutHeader.querySelector(
             '.category',
           ) as HTMLElement;
-          const categoryText = category.textContent;
+          const categoryText = category.textContent || '';
           const title = simpleLayoutHeader.querySelector(
             '.title',
           ) as HTMLElement;
@@ -115,7 +113,7 @@ async function processHrefs(
 
           const content = articleLayoutSimple.querySelectorAll(
             '.wysiwyg-content',
-          ) as NodeListOf<HTMLElement>;
+          );
 
           // Fix img src path
           content.forEach((contentBlock) => {
@@ -200,9 +198,9 @@ export default async function harpersParser(issueUrl: string) {
       '.issue-readings',
     ) as HTMLElement;
 
-    const readingsLinks = readings.querySelectorAll('a.ac-title') as NodeListOf<
-      HTMLAnchorElement
-    >;
+    const readingsLinks = readings.querySelectorAll<HTMLAnchorElement>(
+      'a.ac-title',
+    );
 
     const readingsHrefs = Array.from(readingsLinks).map((a) => a.href);
 
@@ -210,9 +208,9 @@ export default async function harpersParser(issueUrl: string) {
       '.issue-articles',
     ) as HTMLElement;
 
-    const articleLinks = articles.querySelectorAll(
+    const articleLinks = articles.querySelectorAll<HTMLAnchorElement>(
       'a:not([rel="author"])',
-    ) as NodeListOf<HTMLAnchorElement>;
+    );
 
     const articleHrefs = Array.from(
       new Set(Array.from(articleLinks).map((a) => a.href)),

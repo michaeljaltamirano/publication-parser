@@ -60,8 +60,8 @@ async function processHrefs(
 
           return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<h1>${lettersHeaderFirstChild.innerHTML}</h1><div>${letters.innerHTML}</div><br>End Letters<br>`);
         } else if (articleHeader) {
-          const h1 = articleHeader?.firstChild?.textContent;
-          const h2 = articleHeader?.lastChild?.textContent;
+          const h1 = articleHeader?.firstChild?.textContent || '';
+          const h2 = articleHeader?.lastChild?.textContent || '';
           const reviewedItemsHolder = articleDom.window.document.querySelector(
             '.reviewed-items-holder',
           );
@@ -115,8 +115,11 @@ async function processHrefs(
 
           // If there's images, correctly load them
           body.querySelectorAll('img').forEach((img) => {
-            const srcset = img.getAttribute('data-srcset');
-            img.src = `http://www.lrb.co.uk${srcset}`;
+            const appsrc = img.getAttribute('data-appsrc');
+
+            if (appsrc) {
+              img.src = `http://www.lrb.co.uk${appsrc}`;
+            }
           });
 
           const innerHTMLWithArticle = `${dom.window.document.body.innerHTML}<div><h1>${h1}</h1><h2>${h2}</h2></div><div>${reviewedItemsContent.innerHTML}</div><div>${body.innerHTML}</div><br>End Article<br>`;
