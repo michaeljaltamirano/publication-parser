@@ -1,5 +1,5 @@
 module.exports = {
-  '*.js': ['yarn eslint --fix'],
+  '*.js': ['yarn prettier -- --write'],
   '!(tsconfig).json': ['yarn prettier -- --write'],
   '*.ts': [
     'yarn prettier -- --write',
