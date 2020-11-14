@@ -38,10 +38,10 @@ async function processHrefs(
 
         const header = articleDom.window.document.querySelector<
           HTMLHeadingElement
-        >('header.article-header');
+        >('header[class*="article-header"]');
 
         if (!header) {
-          throw new Error('parse error');
+          throw new Error('header parse error');
         }
 
         const title = header.querySelector('h1');
@@ -59,7 +59,7 @@ async function processHrefs(
         );
 
         if (!article) {
-          throw new Error('parse error');
+          throw new Error('article parse error');
         }
 
         const reviewedItems = article.querySelector('.review-items');
@@ -68,7 +68,7 @@ async function processHrefs(
         const firstRow = article.querySelector('.row');
 
         if (!firstRow) {
-          throw new Error('parse error');
+          throw new Error('row parse error');
         }
 
         /**
