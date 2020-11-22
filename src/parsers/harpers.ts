@@ -100,7 +100,7 @@ async function processHrefs(
             '',
           );
 
-          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<div className="article-container">${featureLayoutHeader.outerHTML}${pictureMarkup}${content}</div>`);
+          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article>${featureLayoutHeader.outerHTML}${pictureMarkup}${content}</article>`);
         } else if (articleLayoutSimple) {
           const simpleLayoutHeader = articleLayoutSimple.querySelector(
             '.article-header',
@@ -136,7 +136,7 @@ async function processHrefs(
             '',
           );
 
-          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<div className="article-container">${simpleLayoutHeader.outerHTML}${combinedContent}</div>`);
+          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article>${simpleLayoutHeader.outerHTML}${combinedContent}</article>`);
         } else if (harpersIndex) {
           const heading = harpersIndex.querySelector('h1');
           const headingMarkup = heading?.outerHTML || '';
@@ -149,7 +149,7 @@ async function processHrefs(
           const linkedSources = body.querySelectorAll('.index-tooltip');
           linkedSources.forEach((linkedSource) => linkedSource.remove());
 
-          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<div className="article-container">${headingMarkup}${body.outerHTML}</div>`);
+          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article>${headingMarkup}${body.outerHTML}</article>`);
         } else if (findings) {
           const content = findings.querySelector('.flex-sections');
 
@@ -157,7 +157,7 @@ async function processHrefs(
             throw new Error('Findings error!');
           }
 
-          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<div className="article-container"><${content.outerHTML}</div>`);
+          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article><${content.outerHTML}</article>`);
         } else {
           throw new Error('Unresolved path!');
         }
