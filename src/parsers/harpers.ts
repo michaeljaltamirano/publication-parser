@@ -45,7 +45,6 @@ async function processHrefs(
           '.article-layout-featured',
         );
 
-        // TODO: Download this too
         const harpersIndex = articleDom.window.document.querySelector(
           '.post-type-archive-index',
         );
@@ -56,84 +55,88 @@ async function processHrefs(
 
         if (articleLayoutFeature) {
           const featureLayoutHeader = articleLayoutFeature.querySelector(
-            '.title-header.mobile',
+            '.title-header.desktop',
           ) as HTMLElement;
 
-          const category = featureLayoutHeader.querySelector(
-            '.category',
+          const picture = articleLayoutFeature.querySelector(
+            '.article-hero-img',
           ) as HTMLElement;
-          const categoryText = category.textContent || '';
-          const byline = featureLayoutHeader.querySelector(
-            '.byline',
-          ) as HTMLElement;
-          const bylineLink = byline.querySelector('a') as HTMLElement;
-          const author = bylineLink.textContent || '';
-          const articleTitle = featureLayoutHeader.querySelector(
-            '.article-title',
-          ) as HTMLElement;
-          const subheading = featureLayoutHeader.querySelector('.subheading');
-          const subheadingMarkup = subheading?.outerHTML || '';
-
-          const picture = featureLayoutHeader.nextElementSibling as HTMLElement;
           const pictureMarkup = picture?.outerHTML || '';
 
           const flexSections = articleLayoutFeature.querySelector(
             '.flex-sections',
           ) as HTMLElement;
 
-          // Fix img src path
-          const images = flexSections.querySelectorAll('img');
-          images.forEach((img) => {
-            const oldSource = img.src;
-            img.src = `https://www.harpers.orgflexSections${oldSource}`;
-          });
-
-          // Remove sidebar ad content
-          const sidebars = flexSections.querySelectorAll('.col-md-4');
-          sidebars.forEach((sidebar) => sidebar.remove());
-
-          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<div class="article-container"><div>${categoryText}</div>${articleTitle.outerHTML}<div>${author}</div><div>${subheadingMarkup}</div>${pictureMarkup}${flexSections.outerHTML}</div>`);
-        } else if (articleLayoutSimple) {
-          const simpleLayoutHeader = articleLayoutSimple.querySelector(
-            '.article-header',
-          ) as HTMLElement;
-
-          const category = simpleLayoutHeader.querySelector(
-            '.category',
-          ) as HTMLElement;
-          const categoryText = category.textContent || '';
-          const title = simpleLayoutHeader.querySelector(
-            '.title',
-          ) as HTMLElement;
-          const byline = simpleLayoutHeader.querySelector('.byline') as
-            | HTMLElement
-            | undefined;
-
-          const author = byline?.innerText || '';
-
-          const content = articleLayoutSimple.querySelectorAll(
-            '.wysiwyg-content',
+          // Remove sidebar ad + other content
+          const sidebarsMd = flexSections.querySelectorAll('.col-md-4');
+          sidebarsMd.forEach((section) => section.remove());
+          const sidebarsLg = flexSections.querySelectorAll('.col-lg-4');
+          sidebarsLg.forEach((section) => section.remove());
+          const afterPostContent = flexSections.querySelectorAll(
+            '.after-post-content',
           );
+          afterPostContent.forEach((section) => section.remove());
+          const controls = flexSections.querySelectorAll(
+            '.header-meta.header-controls',
+          );
+          controls.forEach((section) => section.remove());
 
-          // Fix img src path
-          content.forEach((contentBlock) => {
-            const images = contentBlock.querySelectorAll('img');
-
-            images.forEach((img) => {
-              const oldSource = img.src;
-              img.src = `https://www.harpers.org${oldSource}`;
-            });
-          });
-
-          const combinedContent = Array.from(content).reduce(
+          const content = Array.from(flexSections.children).reduce(
             (article, contentBlock) => {
-              article += contentBlock.outerHTML;
+              if (
+                Array.from(contentBlock.classList).includes(
+                  'after-post-content',
+                )
+              ) {
+                return article;
+              }
+
+              if (contentBlock && contentBlock.outerHTML) {
+                article += contentBlock.outerHTML;
+              }
+
               return article;
             },
             '',
           );
 
-          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<div class="article-container"><div>${categoryText}</div><div>${title.outerHTML}</div><div>${author}</div><div>${combinedContent}</div></div>`);
+          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<div className="article-container">${featureLayoutHeader.outerHTML}${pictureMarkup}${content}</div>`);
+        } else if (articleLayoutSimple) {
+          const simpleLayoutHeader = articleLayoutSimple.querySelector(
+            '.article-header',
+          ) as HTMLElement;
+
+          const headerMeta = simpleLayoutHeader.querySelector('.header-meta');
+          // Remove share article text
+          headerMeta?.remove();
+
+          const content = articleLayoutSimple.querySelectorAll<HTMLElement>(
+            '.wysiwyg-content',
+          );
+
+          // Remove email signup block
+          content.forEach((contentBlock) => {
+            const afterPostContent = contentBlock.querySelectorAll(
+              '.after-post-content',
+            );
+
+            afterPostContent.forEach((section) => section.remove());
+          });
+
+          const combinedContent = Array.from(content).reduce(
+            (acc, arrContent) => {
+              return (acc += Array.from(arrContent.children).reduce(
+                (article, contentBlock) => {
+                  article += contentBlock.outerHTML;
+                  return article;
+                },
+                '',
+              ));
+            },
+            '',
+          );
+
+          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<div className="article-container">${simpleLayoutHeader.outerHTML}${combinedContent}</div>`);
         } else if (harpersIndex) {
           const heading = harpersIndex.querySelector('h1');
           const headingMarkup = heading?.outerHTML || '';
@@ -143,7 +146,10 @@ async function processHrefs(
             throw new Error(`Harper's Index error!`);
           }
 
-          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<div class="article-container">${headingMarkup}${body.outerHTML}</div>`);
+          const linkedSources = body.querySelectorAll('.index-tooltip');
+          linkedSources.forEach((linkedSource) => linkedSource.remove());
+
+          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<div className="article-container">${headingMarkup}${body.outerHTML}</div>`);
         } else if (findings) {
           const content = findings.querySelector('.flex-sections');
 
@@ -151,7 +157,7 @@ async function processHrefs(
             throw new Error('Findings error!');
           }
 
-          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<div class="article-container"><${content.outerHTML}</div>`);
+          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<div className="article-container"><${content.outerHTML}</div>`);
         } else {
           throw new Error('Unresolved path!');
         }
