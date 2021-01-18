@@ -87,32 +87,29 @@ async function processHrefs(
             /\D/g,
             '',
           )}`,
-        ).then(
-          (res) =>
-            res.json() as Promise<{
-              articleIntroPrimary: ArticleBody;
-              bookdetails: Array<{
-                authordetails: string;
-                bookdetails: string;
-                booktitle: string;
-                imageurl: boolean;
-                publisherdetails: string | '';
-              }>;
-              content: string;
-              leadimage?: {
-                imagecaption: string | '';
-                imagecredit: string | '';
-                url: string | '';
-              };
-              paywallStatus: number;
-              paywallBanner: {
-                loginUrl?: string;
-                subscribeUrl?: string;
-                text?: string;
-              };
-              topics: [];
-            }>,
-        );
+        ).then<{
+          articleIntroPrimary: ArticleBody;
+          bookdetails: Array<{
+            authordetails: string;
+            bookdetails: string;
+            booktitle: string;
+            imageurl: boolean;
+            publisherdetails: string | '';
+          }>;
+          content: string;
+          leadimage?: {
+            imagecaption: string | '';
+            imagecredit: string | '';
+            url: string | '';
+          };
+          paywallStatus: number;
+          paywallBanner: {
+            loginUrl?: string;
+            subscribeUrl?: string;
+            text?: string;
+          };
+          topics: [];
+        }>((res) => res.json());
 
         const {
           articleIntroPrimary,
@@ -188,6 +185,29 @@ async function processHrefs(
           const remainder = content.slice(iframeEnd + 9);
 
           cleanContent = start + remainder;
+        }
+
+        /**
+         * Clean up affiliated link
+         */
+        if (
+          cleanContent.indexOf(
+            '<p><a href="https://www.google.com/url?q=https://shop.the-tls.co.uk/tls-latest-reviews',
+          )
+        ) {
+          cleanContent = cleanContent.split(
+            '<p><a href="https://www.google.com/url?q=https://shop.the-tls.co.uk/tls-latest-reviews',
+          )[0];
+        }
+
+        if (
+          cleanContent.indexOf(
+            '<p><a href="https://shop.the-tls.co.uk/tls-latest-reviews/',
+          )
+        ) {
+          cleanContent = cleanContent.split(
+            '<p><a href="https://shop.the-tls.co.uk/tls-latest-reviews/',
+          )[0];
         }
 
         const contentBody = `
