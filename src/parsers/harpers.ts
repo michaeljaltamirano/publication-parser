@@ -65,42 +65,47 @@ async function processHrefs(
 
           const flexSections = articleLayoutFeature.querySelector(
             '.flex-sections',
-          ) as HTMLElement;
-
-          // Remove sidebar ad + other content
-          const sidebarsMd = flexSections.querySelectorAll('.col-md-4');
-          sidebarsMd.forEach((section) => section.remove());
-          const sidebarsLg = flexSections.querySelectorAll('.col-lg-4');
-          sidebarsLg.forEach((section) => section.remove());
-          const afterPostContent = flexSections.querySelectorAll(
-            '.after-post-content',
           );
-          afterPostContent.forEach((section) => section.remove());
-          const controls = flexSections.querySelectorAll(
-            '.header-meta.header-controls',
-          );
-          controls.forEach((section) => section.remove());
 
-          const content = Array.from(flexSections.children).reduce(
-            (article, contentBlock) => {
-              if (
-                Array.from(contentBlock.classList).includes(
-                  'after-post-content',
-                )
-              ) {
+          if (flexSections) {
+            // Remove sidebar ad + other content
+            const sidebarsMd = flexSections.querySelectorAll('.col-md-4');
+            sidebarsMd.forEach((section) => section.remove());
+            const sidebarsLg = flexSections.querySelectorAll('.col-lg-4');
+            sidebarsLg.forEach((section) => section.remove());
+            const afterPostContent = flexSections.querySelectorAll(
+              '.after-post-content',
+            );
+            afterPostContent.forEach((section) => section.remove());
+            const controls = flexSections.querySelectorAll(
+              '.header-meta.header-controls',
+            );
+            controls.forEach((section) => section.remove());
+
+            const content = Array.from(flexSections.children).reduce(
+              (article, contentBlock) => {
+                if (
+                  Array.from(contentBlock.classList).includes(
+                    'after-post-content',
+                  )
+                ) {
+                  return article;
+                }
+
+                if (contentBlock && contentBlock.outerHTML) {
+                  article += contentBlock.outerHTML;
+                }
+
                 return article;
-              }
+              },
+              '',
+            );
 
-              if (contentBlock && contentBlock.outerHTML) {
-                article += contentBlock.outerHTML;
-              }
-
-              return article;
-            },
-            '',
-          );
-
-          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article>${featureLayoutHeader.outerHTML}${pictureMarkup}${content}</article>`);
+            return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article>${featureLayoutHeader.outerHTML}${pictureMarkup}${content}</article>`);
+          } else {
+            console.log('no flexSections found');
+            return;
+          }
         } else if (articleLayoutSimple) {
           const simpleLayoutHeader = articleLayoutSimple.querySelector(
             '.article-header',
