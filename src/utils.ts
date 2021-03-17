@@ -1,17 +1,23 @@
 import nodeFetch from 'node-fetch';
 
-export function fetchContent(url: string, options: { [key: string]: unknown }) {
+export async function fetchContent(
+  url: string,
+  options: Record<string, unknown>,
+): Promise<string | undefined> {
   return nodeFetch(url, options)
-    .then((res) => res.text())
-    .catch((err) => console.log('err', err));
+    .then(async (res) => res.text())
+    .catch((err) => {
+      console.error('err', err);
+      return undefined;
+    });
 }
 
-export function fetchContentArrayBuffer(
+export async function fetchContentArrayBuffer(
   url: string,
-  options: { [key: string]: unknown },
+  options: Record<string, unknown>,
 ) {
   return nodeFetch(url, options)
-    .then((res) =>
+    .then(async (res) =>
       res.arrayBuffer().then((ab) => {
         const dataView = new DataView(ab);
         const decoder = new TextDecoder();
@@ -19,7 +25,9 @@ export function fetchContentArrayBuffer(
         return decoder.decode(dataView);
       }),
     )
-    .catch((err) => console.log('err', err));
+    .catch((err) => {
+      console.error('err', err);
+    });
 }
 
 export function getOptions({
@@ -49,6 +57,10 @@ export function throwCookieError() {
 }
 
 export function handleError(err: Error) {
-  console.log(err.message);
+  console.error(err.message);
   return process.exit();
 }
+
+export const isNotNullish = <T>(val: T | null | undefined): val is T => {
+  return val !== null && val !== undefined;
+};
