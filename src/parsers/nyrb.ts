@@ -1,13 +1,15 @@
 import fs from 'fs';
 import jsdom from 'jsdom';
 import ENV from '../env';
-const { JSDOM } = jsdom;
 import {
   fetchContent,
   getOptions,
   throwCookieError,
   handleError,
+  isNotNullish,
 } from '../utils';
+
+const { JSDOM } = jsdom;
 
 const publicationName = 'The New York Review of Books';
 // const cookie = "wordpress_logged_in_XXX=XXX";
@@ -18,7 +20,7 @@ async function processHrefs(
   volumeNumberAndDate: string,
   options: Record<string, unknown>,
 ) {
-  const dom = new JSDOM(`<!DOCTYPE html>`);
+  const dom = new JSDOM('<!DOCTYPE html>');
   dom.window.document.body.innerHTML = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
 
   for (const href of hrefs) {
@@ -26,7 +28,7 @@ async function processHrefs(
     console.log(`Fetching: ${href}`);
     await fetchContent(href, options)
       .then((result) => {
-        if (!result) {
+        if (!isNotNullish(result)) {
           throw new Error('fetchContent error!');
         }
 
@@ -36,9 +38,9 @@ async function processHrefs(
 
         if (paywall) throwCookieError();
 
-        const header = articleDom.window.document.querySelector<
-          HTMLHeadingElement
-        >('header[class*="article-header"]');
+        const header = articleDom.window.document.querySelector<HTMLHeadingElement>(
+          'header[class*="article-header"]',
+        );
 
         if (!header) {
           throw new Error('header parse error');
@@ -49,9 +51,9 @@ async function processHrefs(
         const dek = header.querySelector<HTMLElement>('div.dek:not(.author)');
 
         const titleAndAuthorMarkup = `<heading>${
-          title?.outerHTML || ''
-        }</heading><h2>${author?.textContent || ''}</h2><h3>${
-          dek?.outerHTML || ''
+          title?.outerHTML ?? ''
+        }</heading><h2>${author?.textContent ?? ''}</h2><h3>${
+          dek?.outerHTML ?? ''
         }</h3>`;
 
         const article = articleDom.window.document.querySelector<HTMLElement>(
@@ -80,34 +82,32 @@ async function processHrefs(
          */
         const body = firstRow.querySelectorAll<HTMLElement>('div.article-col');
 
-        if (!body) {
+        if (!isNotNullish(body)) {
           throw new Error('No article body!');
         }
 
-        const bodyMarkup = Array.from(body).reduce((acc, markup) => {
+        const bodyMarkup = Array.from(body).reduce((_acc, markup) => {
           const nodes = Array.from(markup.childNodes) as HTMLElement[];
 
-          acc = nodes.reduce((acc, node) => {
+          return nodes.reduce((innerAcc, node) => {
             if (
               !node.outerHTML ||
-              (node.classList &&
+              (isNotNullish(node.classList) &&
                 Array.from(node.classList).includes('inline-ad'))
             )
-              return acc;
+              return innerAcc;
 
-            return (acc += node.outerHTML);
+            return innerAcc + node.outerHTML;
           }, '');
-
-          return acc;
         }, '');
 
         const authorInfo = article.querySelector('.author-info > p');
 
-        return (dom.window.document.body.innerHTML = `${
+        dom.window.document.body.innerHTML = `${
           dom.window.document.body.innerHTML
         }<div class="article-container">${titleAndAuthorMarkup}${
-          reviewedItems?.outerHTML || ''
-        }${bodyMarkup}${authorInfo?.outerHTML || ''}</div>`);
+          reviewedItems?.outerHTML ?? ''
+        }${bodyMarkup}${authorInfo?.outerHTML ?? ''}</div>`;
       })
       .catch((error) => handleError(error));
   }
@@ -137,22 +137,22 @@ export default async function nyrbParser(issueUrl: string) {
   const options = getOptions({ headers, issueUrl });
 
   // Get list of articles from the Table of Contents
-  return fetchContent(issueUrl, options).then((result) => {
-    if (!result) {
+  return fetchContent(issueUrl, options).then(async (result) => {
+    if (!isNotNullish(result)) {
       throw new Error('fetchContent error!');
     }
 
     const dom = new JSDOM(result);
-    const tableOfContentsLinks = dom.window.document.querySelectorAll<
-      HTMLAnchorElement
-    >('a[href*="nybooks.com/articles"]');
+    const tableOfContentsLinks = dom.window.document.querySelectorAll<HTMLAnchorElement>(
+      'a[href*="nybooks.com/articles"]',
+    );
     const hrefs = Array.from(tableOfContentsLinks).map((link) => link.href);
 
     const date = dom.window.document.querySelector<HTMLElement>(
       'header.issue_header > p.h2',
     )?.textContent;
 
-    if (!date) {
+    if (!isNotNullish(date)) {
       throw new Error('Issue date parsing error');
     }
 

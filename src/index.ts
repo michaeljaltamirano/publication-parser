@@ -1,14 +1,15 @@
 import path from 'path';
 import readline from 'readline';
 import nodemailer from 'nodemailer';
+import createLogger from 'progress-estimator';
+import type SESTransport from 'nodemailer/lib/ses-transport';
+
 import harpersParser from './parsers/harpers';
 import lrbParser from './parsers/lrb';
 import nyrbParser from './parsers/nyrb';
 import bookforumParser from './parsers/bookforum';
-import createLogger from 'progress-estimator';
 import ENV from './env';
 import tlsParser from './parsers/tls';
-import SESTransport from 'nodemailer/lib/ses-transport';
 
 const {
   email: { recipient, sender, twoFactorPassword },
@@ -19,45 +20,51 @@ const rl = readline.createInterface({
   output: process.stdout,
 });
 
-type GetPublicationInfoReturnType = {
+interface GetPublicationInfoReturnType {
   exampleUrl: string;
   publicationParser: (
     issueUrl: string,
   ) => Promise<{
     html: string;
-    volumeNumberAndDate: string;
     publicationName: string;
+    volumeNumberAndDate: string;
   }>;
   shorthand: string;
-};
+}
+
+const LRB_INPUT = 1;
+const NYRB_INPUT = 2;
+const HARPERS_INPUT = 3;
+const BOOKFORUM_INPUT = 4;
+const TLS_INPUT = 5;
 
 function getPublicationInfo(input: number): GetPublicationInfoReturnType {
   switch (input) {
-    case 1:
+    case LRB_INPUT:
       return {
         exampleUrl: 'https://www.lrb.co.uk/the-paper/v42/n09',
         publicationParser: lrbParser,
         shorthand: 'lrb',
       };
-    case 2:
+    case NYRB_INPUT:
       return {
         exampleUrl: 'https://www.nybooks.com/issues/2020/05/28/',
         publicationParser: nyrbParser,
         shorthand: 'nyrb',
       };
-    case 3:
+    case HARPERS_INPUT:
       return {
         exampleUrl: 'https://harpers.org/archive/2020/05/',
         publicationParser: harpersParser,
         shorthand: 'harpers',
       };
-    case 4:
+    case BOOKFORUM_INPUT:
       return {
         exampleUrl: 'https://www.bookforum.com/print/2701',
         publicationParser: bookforumParser,
         shorthand: 'bookforum',
       };
-    case 5:
+    case TLS_INPUT:
       return {
         exampleUrl:
           'https://www.the-tls.co.uk/issues/june-26-2020/, or https://www.the-tls.co.uk/issues/current-issue-2-2/ for current issue',
@@ -78,26 +85,26 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-type MailOptions = {
-  from: string;
-  to: string;
-  subject: string;
+interface MailOptions {
   attachments: {
-    filename: string;
     content: string;
     contentType: string;
+    filename: string;
   }[];
-};
+  from: string;
+  subject: string;
+  to: string;
+}
 
 async function send(mailOptions: MailOptions) {
-  const emailSentMsg = await transporter
+  await transporter
     .sendMail(mailOptions)
-    .then((info: SESTransport.SentMessageInfo) =>
-      console.log(`Email sent: ${info.response}`),
-    )
-    .catch((error) => console.log(error));
-
-  console.log(emailSentMsg);
+    .then((info: SESTransport.SentMessageInfo) => {
+      console.log(`Email sent: ${info.response}`);
+    })
+    .catch((error) => {
+      console.log(error);
+    });
 }
 
 async function sendEmail(
@@ -111,7 +118,7 @@ rl.question(
   "Please enter the number associated with the publication you would like to scrape: \n  1 - LRB \n  2 - NYRB \n  3 - Harper's \n  4 - Bookforum \n  5 - The Times Literary Supplement \n\n  Answer: ",
   (input) => {
     const { exampleUrl, publicationParser, shorthand } = getPublicationInfo(
-      parseInt(input),
+      parseInt(input, 10),
     );
 
     rl.question(
@@ -148,7 +155,7 @@ rl.question(
           await sendEmail(mailOptions, logger);
 
           rl.close();
-        } catch (e) {
+        } catch (e: unknown) {
           console.error('catch');
           console.error(e);
 

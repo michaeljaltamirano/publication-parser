@@ -1,13 +1,15 @@
 import fs from 'fs';
 import jsdom from 'jsdom';
 import ENV from '../env';
-const { JSDOM } = jsdom;
 import {
   fetchContent,
   getOptions,
   throwCookieError,
   handleError,
+  isNotNullish,
 } from '../utils';
+
+const { JSDOM } = jsdom;
 
 const publicationName = "Harper's Magazine";
 // const cookie = "wordpress_logged_in_XXX=XXX";
@@ -18,7 +20,7 @@ async function processHrefs(
   volumeNumberAndDate: string,
   options: ReturnType<typeof getOptions>,
 ) {
-  const dom = new JSDOM(`<!DOCTYPE html>`);
+  const dom = new JSDOM('<!DOCTYPE html>');
   dom.window.document.body.innerHTML = `<h1>${publicationName} ${volumeNumberAndDate}</h1>`;
 
   for (const href of hrefs) {
@@ -26,7 +28,7 @@ async function processHrefs(
     console.log(`Fetching: ${href}`);
     await fetchContent(href, options)
       .then((result) => {
-        if (!result) {
+        if (!isNotNullish(result)) {
           throw new Error('fetchContent error!');
         }
 
@@ -56,12 +58,12 @@ async function processHrefs(
         if (articleLayoutFeature) {
           const featureLayoutHeader = articleLayoutFeature.querySelector(
             '.title-header.desktop',
-          ) as HTMLElement;
+          );
 
           const picture = articleLayoutFeature.querySelector(
             '.article-hero-img',
-          ) as HTMLElement;
-          const pictureMarkup = picture?.outerHTML || '';
+          );
+          const pictureMarkup = picture?.outerHTML ?? '';
 
           const flexSections = articleLayoutFeature.querySelector(
             '.flex-sections',
@@ -70,17 +72,25 @@ async function processHrefs(
           if (flexSections) {
             // Remove sidebar ad + other content
             const sidebarsMd = flexSections.querySelectorAll('.col-md-4');
-            sidebarsMd.forEach((section) => section.remove());
+            sidebarsMd.forEach((section) => {
+              section.remove();
+            });
             const sidebarsLg = flexSections.querySelectorAll('.col-lg-4');
-            sidebarsLg.forEach((section) => section.remove());
+            sidebarsLg.forEach((section) => {
+              section.remove();
+            });
             const afterPostContent = flexSections.querySelectorAll(
               '.after-post-content',
             );
-            afterPostContent.forEach((section) => section.remove());
+            afterPostContent.forEach((section) => {
+              section.remove();
+            });
             const controls = flexSections.querySelectorAll(
               '.header-meta.header-controls',
             );
-            controls.forEach((section) => section.remove());
+            controls.forEach((section) => {
+              section.remove();
+            });
 
             const content = Array.from(flexSections.children).reduce(
               (article, contentBlock) => {
@@ -92,26 +102,32 @@ async function processHrefs(
                   return article;
                 }
 
-                if (contentBlock && contentBlock.outerHTML) {
-                  article += contentBlock.outerHTML;
+                let newString = article;
+
+                if (contentBlock.outerHTML) {
+                  newString += contentBlock.outerHTML;
                 }
 
-                return article;
+                return newString;
               },
               '',
             );
 
-            return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article>${featureLayoutHeader.outerHTML}${pictureMarkup}${content}</article>`);
-          } else {
-            console.log('no flexSections found');
+            dom.window.document.body.innerHTML = `${
+              dom.window.document.body.innerHTML
+            }<article>${
+              featureLayoutHeader?.outerHTML ?? ''
+            }${pictureMarkup}${content}</article>`;
+
             return;
           }
+          console.log('no flexSections found');
         } else if (articleLayoutSimple) {
           const simpleLayoutHeader = articleLayoutSimple.querySelector(
             '.article-header',
-          ) as HTMLElement;
+          );
 
-          const headerMeta = simpleLayoutHeader.querySelector('.header-meta');
+          const headerMeta = simpleLayoutHeader?.querySelector('.header-meta');
           // Remove share article text
           headerMeta?.remove();
 
@@ -125,36 +141,48 @@ async function processHrefs(
               '.after-post-content',
             );
 
-            afterPostContent.forEach((section) => section.remove());
+            afterPostContent.forEach((section) => {
+              section.remove();
+            });
           });
 
           const combinedContent = Array.from(content).reduce(
             (acc, arrContent) => {
-              return (acc += Array.from(arrContent.children).reduce(
+              const additional = Array.from(arrContent.children).reduce(
                 (article, contentBlock) => {
-                  article += contentBlock.outerHTML;
-                  return article;
+                  const newArticle = article + contentBlock.outerHTML;
+                  return newArticle;
                 },
                 '',
-              ));
+              );
+
+              const newAcc = acc + additional;
+
+              return newAcc;
             },
             '',
           );
 
-          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article>${simpleLayoutHeader.outerHTML}${combinedContent}</article>`);
+          dom.window.document.body.innerHTML = `${
+            dom.window.document.body.innerHTML
+          }<article>${
+            simpleLayoutHeader?.outerHTML ?? ''
+          }${combinedContent}</article>`;
         } else if (harpersIndex) {
           const heading = harpersIndex.querySelector('h1');
-          const headingMarkup = heading?.outerHTML || '';
+          const headingMarkup = heading?.outerHTML ?? '';
           const body = harpersIndex.querySelector('.page-container');
 
           if (!body) {
-            throw new Error(`Harper's Index error!`);
+            throw new Error("Harper's Index error!");
           }
 
           const linkedSources = body.querySelectorAll('.index-tooltip');
-          linkedSources.forEach((linkedSource) => linkedSource.remove());
+          linkedSources.forEach((linkedSource) => {
+            linkedSource.remove();
+          });
 
-          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article>${headingMarkup}${body.outerHTML}</article>`);
+          dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article>${headingMarkup}${body.outerHTML}</article>`;
         } else if (findings) {
           const content = findings.querySelector('.flex-sections');
 
@@ -162,7 +190,7 @@ async function processHrefs(
             throw new Error('Findings error!');
           }
 
-          return (dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article><${content.outerHTML}</article>`);
+          dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article><${content.outerHTML}</article>`;
         } else {
           throw new Error('Unresolved path!');
         }
@@ -198,30 +226,25 @@ export default async function harpersParser(issueUrl: string) {
   // Q1/Q2 2020 redesign is a little all over the place
   // This does not grab the artwork they print anymore
   // It's a slideshow: .issue-slideshow
-  return fetchContent(issueUrl, options).then((result) => {
-    if (!result) {
+  return fetchContent(issueUrl, options).then(async (result) => {
+    if (!isNotNullish(result)) {
       throw new Error('fetchContent error!');
     }
 
     const dom = new JSDOM(result);
 
-    const readings = dom.window.document.querySelector(
-      '.issue-readings',
-    ) as HTMLElement;
+    const readings = dom.window.document.querySelector('.issue-readings');
 
-    const readingsLinks = readings.querySelectorAll<HTMLAnchorElement>(
-      'a.ac-title',
-    );
+    const readingsLinks =
+      readings?.querySelectorAll<HTMLAnchorElement>('a.ac-title') ?? [];
 
     const readingsHrefs = Array.from(readingsLinks).map((a) => a.href);
 
-    const articles = dom.window.document.querySelector(
-      '.issue-articles',
-    ) as HTMLElement;
+    const articles = dom.window.document.querySelector('.issue-articles');
 
-    const articleLinks = articles.querySelectorAll<HTMLAnchorElement>(
-      'a:not([rel="author"])',
-    );
+    const articleLinks =
+      articles?.querySelectorAll<HTMLAnchorElement>('a:not([rel="author"])') ??
+      [];
 
     const articleHrefs = Array.from(
       new Set(Array.from(articleLinks).map((a) => a.href)),
@@ -229,9 +252,9 @@ export default async function harpersParser(issueUrl: string) {
 
     const hrefs = [...readingsHrefs, ...articleHrefs];
 
-    const header = dom.window.document.querySelector('h1') as HTMLElement;
+    const header = dom.window.document.querySelector('h1');
 
-    const volumeNumberAndDate = header.innerHTML;
+    const volumeNumberAndDate = header?.innerHTML ?? 'UNKNOWN';
 
     return processHrefs(hrefs, volumeNumberAndDate, options);
   });
