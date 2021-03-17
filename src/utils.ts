@@ -27,6 +27,7 @@ export async function fetchContentArrayBuffer(
     )
     .catch((err) => {
       console.error('err', err);
+      return undefined;
     });
 }
 

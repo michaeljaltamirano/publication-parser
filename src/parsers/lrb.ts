@@ -67,8 +67,7 @@ async function processHrefs(
           }<h1>${lettersHeaderFirstChild?.innerHTML ?? ''}</h1><div>${
             letters?.innerHTML ?? ''
           }</div><br>End Letters<br>`;
-        }
-        if (articleHeader) {
+        } else if (articleHeader) {
           const h1 = articleHeader.firstChild?.textContent ?? '';
           const h2 = articleHeader.lastChild?.textContent ?? '';
           const reviewedItemsHolder = articleDom.window.document.querySelector(
@@ -139,8 +138,9 @@ async function processHrefs(
           }</div><div>${body?.innerHTML ?? ''}</div><br>End Article<br>`;
 
           dom.window.document.body.innerHTML = innerHTMLWithArticle;
+        } else {
+          throw new Error('Unresolved path!');
         }
-        throw new Error('Unresolved path!');
       })
       .catch((err) => handleError(err));
   }
