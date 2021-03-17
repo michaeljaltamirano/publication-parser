@@ -1,13 +1,15 @@
 module.exports = {
   root: true,
+  env: {
+    browser: false,
+    es2021: true,
+    node: true,
+    jest: false,
+  },
+  extends: ['plugin:@michaeljaltamirano/all'],
   parser: '@typescript-eslint/parser',
-  extends: [
-    'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
-    'plugin:@typescript-eslint/recommended-requiring-type-checking',
-  ],
   parserOptions: {
-    ecmaVersion: 2020,
+    ecmaVersion: 12,
     sourceType: 'module',
     project: './tsconfig.json',
   },
@@ -20,15 +22,11 @@ module.exports = {
         argsIgnorePattern: '^_',
       },
     ],
+    'import/prefer-default-export': 'off',
+    'import/no-unresolved': 'off',
+    'import/extensions': 'off',
+    'no-console': 'off',
+    'no-restricted-syntax': 'off',
+    'no-await-in-loop': 'off',
   },
-  overrides: [
-    {
-      files: ['*.js'],
-      rules: {
-        '@typescript-eslint/no-var-requires': 0,
-        '@typescript-eslint/no-use-before-define': 0,
-        'no-var': 0,
-      },
-    },
-  ],
 };

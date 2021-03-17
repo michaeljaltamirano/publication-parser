@@ -1,18 +1,17 @@
 import fs from 'fs';
 import jsdom from 'jsdom';
+
 import ENV from '../env';
-const { JSDOM } = jsdom;
 import {
   fetchContent,
   fetchContentArrayBuffer,
   getOptions,
   throwCookieError,
   handleError,
+  isNotNullish,
 } from '../utils';
 
-const isNotNull = <T>(val: T | null): val is T => {
-  return val !== null;
-};
+const { JSDOM } = jsdom;
 
 const publicationName = 'Bookforum';
 // const cookie = "bfsid=XXX; login=XXX";
@@ -23,7 +22,7 @@ async function processHrefs(
   volumeNumberAndDate: string,
   options: ReturnType<typeof getOptions>,
 ) {
-  const dom = new JSDOM(`<!DOCTYPE html>`);
+  const dom = new JSDOM('<!DOCTYPE html>');
   dom.window.document.body.innerHTML = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
 
   for (const href of hrefs) {
@@ -31,7 +30,7 @@ async function processHrefs(
     console.log(`Fetching: ${href}`);
     await fetchContentArrayBuffer(`${href}`, options)
       .then((result) => {
-        if (!result) {
+        if (!isNotNullish(result)) {
           throw new Error('fetchContentArrayBuffer error!');
         }
 
@@ -40,38 +39,42 @@ async function processHrefs(
         const paywall = articleDom.window.document.querySelector('.paywall');
         const paywallStyle = paywall?.getAttribute('style');
 
-        const isPaywalled =
-          paywallStyle && paywallStyle.includes('display: none');
+        const isPaywalled = paywallStyle?.includes('display: none') ?? false;
 
         if (isPaywalled) throwCookieError();
 
         const article = articleDom.window.document.querySelector(
           '.blog-article',
-        ) as HTMLElement;
+        );
 
         if (article) {
           // Clear cruft: purchase links, social share links, anchor link formatting
           article
             .querySelectorAll('.book-info__purchase-links')
-            .forEach((el) => (el.innerHTML = ''));
-          article
-            .querySelectorAll('af-share-toggle')
-            .forEach((el) => (el.innerHTML = ''));
+            .forEach((el) => {
+              // eslint-disable-next-line no-param-reassign
+              el.innerHTML = '';
+            });
+          article.querySelectorAll('af-share-toggle').forEach((el) => {
+            // eslint-disable-next-line no-param-reassign
+            el.innerHTML = '';
+          });
 
           const shareLinks = article.querySelectorAll('a.share');
 
           shareLinks.forEach((el) => {
-            const parentNode = el.parentNode as HTMLElement;
+            const parentNode = el.parentNode as HTMLElement | null;
 
-            if (parentNode.innerHTML) {
+            if (isNotNullish(parentNode)) {
               parentNode.innerHTML = el.innerHTML;
             }
           });
 
           // Src in form //www, prepend for proper rendering outside of browser
-          article
-            .querySelectorAll('img')
-            .forEach((image) => (image.src = `https:${image.src}`));
+          article.querySelectorAll('img').forEach((image) => {
+            // eslint-disable-next-line no-param-reassign
+            image.src = `https:${image.src}`;
+          });
 
           const articleString = `${dom.window.document.body.innerHTML}<div class="article-container">${article.innerHTML}</div>`;
 
@@ -108,16 +111,16 @@ export default async function bookforumParser(issueUrl: string) {
   const options = getOptions({ headers, issueUrl: `${issueUrl}` });
 
   // Get list of articles from the Table of Contents
-  return fetchContent(issueUrl, options).then((result) => {
-    if (!result) {
+  return fetchContent(issueUrl, options).then(async (result) => {
+    if (!isNotNullish(result)) {
       throw new Error('fetchContent error!');
     }
 
     const dom = new JSDOM(result);
 
-    const articleLinks = dom.window.document.querySelectorAll<
-      HTMLAnchorElement
-    >('.toc-article__link');
+    const articleLinks = dom.window.document.querySelectorAll<HTMLAnchorElement>(
+      '.toc-article__link',
+    );
 
     // Clear duplicate links for feature headings
     const hrefs = Array.from(
@@ -131,12 +134,12 @@ export default async function bookforumParser(issueUrl: string) {
 
             return null;
           })
-          .filter(isNotNull),
+          .filter(isNotNullish),
       ),
     );
 
     const tocTitle = dom.window.document.querySelector('.toc-issue__title');
-    const titleContent = tocTitle?.textContent || '';
+    const titleContent = tocTitle?.textContent ?? '';
 
     // Cleans bookforum format--"Sep/Oct/Nov"--since those aren't directories
     const volumeNumberAndDate = titleContent.replace(/\//g, '-');

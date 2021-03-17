@@ -2,31 +2,33 @@ import fs from 'fs';
 import jsdom from 'jsdom';
 import nodeFetch from 'node-fetch';
 import ENV from '../env';
-const { JSDOM } = jsdom;
 import {
   fetchContent,
   getOptions,
   throwCookieError,
   handleError,
+  isNotNullish,
 } from '../utils';
+
+const { JSDOM } = jsdom;
 
 const publicationName = 'The Times Literary Supplement';
 // const cookie = "main_access=XXX";
 const { tlsCookie: cookie } = ENV;
 
-type ArticleBody = {
+interface ArticleBody {
+  byline: {
+    text: string;
+  };
+  headline: string;
   label: {
     articletype: string;
     category: {
       text: string;
     };
   };
-  headline: string;
   standfirst: string;
-  byline: {
-    text: string;
-  };
-};
+}
 
 const getArticleDetails = (details: ArticleBody) => {
   const {
@@ -52,12 +54,17 @@ const getHeadingDetails = (details: ArticleBody) => {
   };
 };
 
+const PAYWALL_ERROR = -1;
+const FALSY_INDEX_OF = -1;
+const STRING_START = 0;
+const IFRAME_END_INDEX = 9;
+
 async function processHrefs(
   hrefs: string[],
   volumeNumberAndDate: string,
   options: Record<string, unknown>,
 ) {
-  const dom = new JSDOM(`<!DOCTYPE html>`);
+  const dom = new JSDOM('<!DOCTYPE html>');
   dom.window.document.body.outerHTML = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
 
   for (const href of hrefs) {
@@ -65,22 +72,20 @@ async function processHrefs(
     console.log(`Fetching: ${href}`);
     await fetchContent(href, options)
       .then(async (result) => {
-        if (!result) {
+        if (!isNotNullish(result)) {
           throw new Error('fetchContent error!');
         }
 
         const articleDom = new JSDOM(result);
 
-        const body = articleDom.window.document.querySelector(
-          'body',
-        ) as HTMLElement;
-        const classList = Array.from(body.classList);
+        const body = articleDom.window.document.querySelector('body');
+        const classList = Array.from(body?.classList ?? []);
 
-        const postId = classList.find(
-          (className) => className.indexOf('postid') !== -1,
+        const postId = classList.find((className) =>
+          className.includes('postid'),
         );
 
-        if (!postId) throw new Error('no postid found');
+        if (!isNotNullish(postId)) throw new Error('no postid found');
 
         const articleData = await nodeFetch(
           `https://www.the-tls.co.uk/wp-json/tls/v2/single-article/${postId.replace(
@@ -89,27 +94,27 @@ async function processHrefs(
           )}`,
         ).then<{
           articleIntroPrimary: ArticleBody;
-          bookdetails: Array<{
+          bookdetails?: {
             authordetails: string;
             bookdetails: string;
             booktitle: string;
             imageurl: boolean;
             publisherdetails: string | '';
-          }>;
+          }[];
           content: string;
           leadimage?: {
             imagecaption: string | '';
             imagecredit: string | '';
             url: string | '';
           };
-          paywallStatus: number;
           paywallBanner: {
             loginUrl?: string;
             subscribeUrl?: string;
             text?: string;
           };
+          paywallStatus: number;
           topics: [];
-        }>((res) => res.json());
+        }>(async (res) => res.json());
 
         const {
           articleIntroPrimary,
@@ -120,7 +125,8 @@ async function processHrefs(
           paywallStatus,
         } = articleData;
 
-        if (paywallStatus === -1 || paywallBanner.text) throwCookieError();
+        if (paywallStatus === PAYWALL_ERROR || isNotNullish(paywallBanner.text))
+          throwCookieError();
 
         const { articletype, text } = getArticleDetails(articleIntroPrimary);
 
@@ -147,26 +153,29 @@ async function processHrefs(
           : '';
 
         const reviewedItems = bookdetails
-          ? bookdetails.map(({ authordetails, bookdetails, booktitle }) => {
-              return `
+          ? bookdetails.map(
+              ({ authordetails, bookdetails: innerBookDetails, booktitle }) => {
+                return `
                 <span>${booktitle}</span>
-                <span>${bookdetails}</span>
+                <span>${innerBookDetails}</span>
                 <span>By ${authordetails}</span>
             `;
-            })
+              },
+            )
           : [];
 
-        const cleanedReviewedItems = reviewedItems.filter(
-          (item) => item != null,
-        );
+        // TODO: Determine what this was fixing
+        // const cleanedReviewedItems = reviewedItems.filter(
+        //   (item) => item != null,
+        // );
 
-        const reviewBody = cleanedReviewedItems.length
+        const reviewBody = reviewedItems.length
           ? `
             <div>
                 <span>In this Review:</span>
 
                 <div>
-                    ${cleanedReviewedItems.join('<br>')}
+                    ${reviewedItems.join('<br>')}
                 </div>
             </div>
         `
@@ -180,9 +189,9 @@ async function processHrefs(
 
         let cleanContent = content;
 
-        if (iframeStart !== -1 && iframeEnd !== -1) {
-          const start = content.slice(0, iframeStart);
-          const remainder = content.slice(iframeEnd + 9);
+        if (iframeStart !== FALSY_INDEX_OF && iframeEnd !== FALSY_INDEX_OF) {
+          const start = content.slice(STRING_START, iframeStart);
+          const remainder = content.slice(iframeEnd + IFRAME_END_INDEX);
 
           cleanContent = start + remainder;
         }
@@ -195,9 +204,13 @@ async function processHrefs(
             '<p><a href="https://www.google.com/url?q=https://shop.the-tls.co.uk/tls-latest-reviews',
           )
         ) {
-          cleanContent = cleanContent.split(
+          const [newCleanContent] = cleanContent.split(
             '<p><a href="https://www.google.com/url?q=https://shop.the-tls.co.uk/tls-latest-reviews',
-          )[0];
+          );
+
+          if (isNotNullish(newCleanContent)) {
+            cleanContent = newCleanContent;
+          }
         }
 
         if (
@@ -205,9 +218,12 @@ async function processHrefs(
             '<p><a href="https://shop.the-tls.co.uk/tls-latest-reviews/',
           )
         ) {
-          cleanContent = cleanContent.split(
+          const [newCleanContent] = cleanContent.split(
             '<p><a href="https://shop.the-tls.co.uk/tls-latest-reviews/',
-          )[0];
+          );
+          if (isNotNullish(newCleanContent)) {
+            cleanContent = newCleanContent;
+          }
         }
 
         const contentBody = `
@@ -216,7 +232,7 @@ async function processHrefs(
 
         const articleMarkup = `<div class="article-container">${intro}<br>${introImage}<br>${reviewBody}<br><div>${contentBody}</div></div>`;
 
-        return (dom.window.document.body.outerHTML = `${dom.window.document.body.outerHTML}${articleMarkup}`);
+        dom.window.document.body.outerHTML = `${dom.window.document.body.outerHTML}${articleMarkup}`;
       })
       .catch((error) => handleError(error));
   }
@@ -247,19 +263,17 @@ export default async function tlsParser(issueUrl: string) {
 
   // Get list of articles from the Table of Contents
   return fetchContent(issueUrl, options).then(async (result) => {
-    if (!result) {
+    if (!isNotNullish(result)) {
       throw new Error('fetchContent error!');
     }
 
     const dom = new JSDOM(result);
-    const body = dom.window.document.querySelector('body') as HTMLElement;
-    const classList = Array.from(body.classList);
+    const body = dom.window.document.querySelector('body');
+    const classList = Array.from(body?.classList ?? []);
 
-    const postId = classList.find(
-      (className) => className.indexOf('postid') !== -1,
-    );
+    const postId = classList.find((className) => className.includes('postid'));
 
-    if (!postId) throw new Error('no postid found');
+    if (!isNotNullish(postId)) throw new Error('no postid found');
 
     const issueData = await nodeFetch(
       `https://www.the-tls.co.uk/wp-json/tls/v2/contents-page/${postId.replace(
@@ -267,15 +281,16 @@ export default async function tlsParser(issueUrl: string) {
         '',
       )}`,
     ).then(
-      (res) =>
+      async (res) =>
         res.json() as Promise<{
-          contents: {
-            [key: string]: {
-              articleslist: Array<{ url: string }>;
-            };
-          };
+          contents: Record<
+            string,
+            {
+              articleslist: { url: string }[];
+            }
+          >;
           featuredarticle: { url: string };
-          highlights: Array<{ url: string }>; // repeated in contents
+          highlights: { url: string }[]; // repeated in contents
           issuedateline: {
             issuedate: string;
             issuenumber: string;
