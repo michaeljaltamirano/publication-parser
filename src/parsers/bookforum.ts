@@ -30,7 +30,7 @@ async function processHrefs(
     console.log(`Fetching: ${href}`);
     await fetchContentArrayBuffer(`${href}`, options)
       .then((result) => {
-        if (isNotNullish(result)) {
+        if (!isNotNullish(result)) {
           throw new Error('fetchContentArrayBuffer error!');
         }
 
@@ -39,9 +39,9 @@ async function processHrefs(
         const paywall = articleDom.window.document.querySelector('.paywall');
         const paywallStyle = paywall?.getAttribute('style');
 
-        const isPaywalled = paywallStyle?.includes('display: none');
+        const isPaywalled = paywallStyle?.includes('display: none') ?? false;
 
-        if (!isNotNullish(isPaywalled)) throwCookieError();
+        if (isPaywalled) throwCookieError();
 
         const article = articleDom.window.document.querySelector(
           '.blog-article',
