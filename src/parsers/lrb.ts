@@ -67,7 +67,11 @@ async function processHrefs(
           }<h1>${lettersHeaderFirstChild?.innerHTML ?? ''}</h1><div>${
             letters?.innerHTML ?? ''
           }</div><br>End Letters<br>`;
-        } else if (articleHeader) {
+
+          return undefined;
+        }
+
+        if (articleHeader) {
           const h1 = articleHeader.firstChild?.textContent ?? '';
           const h2 = articleHeader.lastChild?.textContent ?? '';
           const reviewedItemsHolder = articleDom.window.document.querySelector(
@@ -138,20 +142,23 @@ async function processHrefs(
           }</div><div>${body?.innerHTML ?? ''}</div><br>End Article<br>`;
 
           dom.window.document.body.innerHTML = innerHTMLWithArticle;
-        } else {
-          throw new Error('Unresolved path!');
+
+          return undefined;
         }
+
+        throw new Error('Unresolved path!');
       })
       .catch((err) => handleError(err));
   }
 
-  fs.writeFile(
-    `output/lrb/${publicationName} - ${volumeNumberAndDate}.html`,
-    dom.window.document.body.innerHTML,
-    (err) => {
-      if (err) throw err;
-    },
-  );
+  try {
+    fs.writeFileSync(
+      `output/lrb/${publicationName} - ${volumeNumberAndDate}.html`,
+      dom.window.document.body.innerHTML,
+    );
+  } catch (e: unknown) {
+    console.error(e);
+  }
 
   console.log('Fetching complete!');
 
@@ -179,54 +186,54 @@ export default async function lrbParser(issueUrl: string) {
   const options = getOptions({ headers, issueUrl });
 
   // Get list of articles
-  return fetchContent(issueUrl, options).then(async (result) => {
-    if (!isNotNullish(result)) {
-      throw new Error('fetchContent error!');
-    }
+  const result = await fetchContent(issueUrl, options);
 
-    const firstDateSplit = result.split('<div class="toc-cover-titles">');
-    const secondDateSplit =
-      firstDateSplit[SECOND_SPLIT_INDEX]?.split(
-        '</div><div class="toc-cover-artist">',
-      ) ?? [];
+  if (!isNotNullish(result)) {
+    throw new Error('fetchContent error!');
+  }
 
-    const dateDom = new JSDOM('<!DOCTYPE html>');
+  const firstDateSplit = result.split('<div class="toc-cover-titles">');
+  const secondDateSplit =
+    firstDateSplit[SECOND_SPLIT_INDEX]?.split(
+      '</div><div class="toc-cover-artist">',
+    ) ?? [];
 
-    dateDom.window.document.body.innerHTML = `<div id="date-and-volume">${
-      secondDateSplit[FIRST_SPLIT_INDEX] ?? ''
-    }</div>`;
+  const dateDom = new JSDOM('<!DOCTYPE html>');
 
-    const dateAndVolume = dateDom.window.document.getElementById(
-      'date-and-volume',
-    );
+  dateDom.window.document.body.innerHTML = `<div id="date-and-volume">${
+    secondDateSplit[FIRST_SPLIT_INDEX] ?? ''
+  }</div>`;
 
-    const volumeNumberAndDate =
-      dateAndVolume?.firstChild?.textContent ?? new Date().toLocaleDateString();
+  const dateAndVolume = dateDom.window.document.getElementById(
+    'date-and-volume',
+  );
 
-    const firstSplit = result.split('<div class="toc-content-holder">');
+  const volumeNumberAndDate =
+    dateAndVolume?.firstChild?.textContent ?? new Date().toLocaleDateString();
 
-    const secondSplit =
-      firstSplit[SECOND_SPLIT_INDEX]?.split(
-        '</div><div class="toc-cover-artist toc-cover-artist--footer" aria-hidden="true">',
-      ) ?? [];
+  const firstSplit = result.split('<div class="toc-content-holder">');
 
-    const dom = new JSDOM('<!DOCTYPE html>');
-    dom.window.document.body.innerHTML = secondSplit[FIRST_SPLIT_INDEX] ?? '';
+  const secondSplit =
+    firstSplit[SECOND_SPLIT_INDEX]?.split(
+      '</div><div class="toc-cover-artist toc-cover-artist--footer" aria-hidden="true">',
+    ) ?? [];
 
-    const linksDiv = dom.window.document.body.querySelector('.toc-grid-items');
+  const dom = new JSDOM('<!DOCTYPE html>');
+  dom.window.document.body.innerHTML = secondSplit[FIRST_SPLIT_INDEX] ?? '';
 
-    const childNodes = Array.from(linksDiv?.childNodes ?? []);
+  const linksDiv = dom.window.document.body.querySelector('.toc-grid-items');
 
-    const hrefs = Array.from(childNodes)
-      .map((link) => {
-        if (isAnchorElement(link)) {
-          return link.href;
-        }
+  const childNodes = Array.from(linksDiv?.childNodes ?? []);
 
-        return null;
-      })
-      .filter(isNotNullish);
+  const hrefs = Array.from(childNodes)
+    .map((link) => {
+      if (isAnchorElement(link)) {
+        return link.href;
+      }
 
-    return processHrefs(hrefs, volumeNumberAndDate, options);
-  });
+      return null;
+    })
+    .filter(isNotNullish);
+
+  return processHrefs(hrefs, volumeNumberAndDate, options);
 }

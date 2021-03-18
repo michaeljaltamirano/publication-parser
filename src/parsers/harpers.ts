@@ -119,10 +119,13 @@ async function processHrefs(
               featureLayoutHeader?.outerHTML ?? ''
             }${pictureMarkup}${content}</article>`;
 
-            return;
+            return undefined;
           }
-          console.log('no flexSections found');
-        } else if (articleLayoutSimple) {
+          console.error('no flexSections found');
+
+          return undefined;
+        }
+        if (articleLayoutSimple) {
           const simpleLayoutHeader = articleLayoutSimple.querySelector(
             '.article-header',
           );
@@ -168,7 +171,10 @@ async function processHrefs(
           }<article>${
             simpleLayoutHeader?.outerHTML ?? ''
           }${combinedContent}</article>`;
-        } else if (harpersIndex) {
+
+          return undefined;
+        }
+        if (harpersIndex) {
           const heading = harpersIndex.querySelector('h1');
           const headingMarkup = heading?.outerHTML ?? '';
           const body = harpersIndex.querySelector('.page-container');
@@ -183,7 +189,10 @@ async function processHrefs(
           });
 
           dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article>${headingMarkup}${body.outerHTML}</article>`;
-        } else if (findings) {
+          return undefined;
+        }
+
+        if (findings) {
           const content = findings.querySelector('.flex-sections');
 
           if (!content) {
@@ -191,20 +200,23 @@ async function processHrefs(
           }
 
           dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article><${content.outerHTML}</article>`;
-        } else {
-          throw new Error('Unresolved path!');
+
+          return undefined;
         }
+
+        throw new Error('Unresolved path!');
       })
       .catch((error) => handleError(error));
   }
 
-  fs.writeFile(
-    `output/harpers/${publicationName} - ${volumeNumberAndDate}.html`,
-    dom.window.document.body.innerHTML,
-    (error) => {
-      if (error) throw error;
-    },
-  );
+  try {
+    fs.writeFileSync(
+      `output/harpers/${publicationName} - ${volumeNumberAndDate}.html`,
+      dom.window.document.body.innerHTML,
+    );
+  } catch (e: unknown) {
+    console.error(e);
+  }
 
   console.log('Fetching complete!');
 
@@ -226,36 +238,36 @@ export default async function harpersParser(issueUrl: string) {
   // Q1/Q2 2020 redesign is a little all over the place
   // This does not grab the artwork they print anymore
   // It's a slideshow: .issue-slideshow
-  return fetchContent(issueUrl, options).then(async (result) => {
-    if (!isNotNullish(result)) {
-      throw new Error('fetchContent error!');
-    }
+  const result = await fetchContent(issueUrl, options);
 
-    const dom = new JSDOM(result);
+  if (!isNotNullish(result)) {
+    throw new Error('fetchContent error!');
+  }
 
-    const readings = dom.window.document.querySelector('.issue-readings');
+  const dom = new JSDOM(result);
 
-    const readingsLinks =
-      readings?.querySelectorAll<HTMLAnchorElement>('a.ac-title') ?? [];
+  const readings = dom.window.document.querySelector('.issue-readings');
 
-    const readingsHrefs = Array.from(readingsLinks).map((a) => a.href);
+  const readingsLinks =
+    readings?.querySelectorAll<HTMLAnchorElement>('a.ac-title') ?? [];
 
-    const articles = dom.window.document.querySelector('.issue-articles');
+  const readingsHrefs = Array.from(readingsLinks).map((a) => a.href);
 
-    const articleLinks =
-      articles?.querySelectorAll<HTMLAnchorElement>('a:not([rel="author"])') ??
-      [];
+  const articles = dom.window.document.querySelector('.issue-articles');
 
-    const articleHrefs = Array.from(
-      new Set(Array.from(articleLinks).map((a) => a.href)),
-    );
+  const articleLinks =
+    articles?.querySelectorAll<HTMLAnchorElement>('a:not([rel="author"])') ??
+    [];
 
-    const hrefs = [...readingsHrefs, ...articleHrefs];
+  const articleHrefs = Array.from(
+    new Set(Array.from(articleLinks).map((a) => a.href)),
+  );
 
-    const header = dom.window.document.querySelector('h1');
+  const hrefs = [...readingsHrefs, ...articleHrefs];
 
-    const volumeNumberAndDate = header?.innerHTML ?? 'UNKNOWN';
+  const header = dom.window.document.querySelector('h1');
 
-    return processHrefs(hrefs, volumeNumberAndDate, options);
-  });
+  const volumeNumberAndDate = header?.innerHTML ?? 'UNKNOWN';
+
+  return processHrefs(hrefs, volumeNumberAndDate, options);
 }

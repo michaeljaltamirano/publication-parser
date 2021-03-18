@@ -28,71 +28,72 @@ async function processHrefs(
   for (const href of hrefs) {
     // Get articles
     console.log(`Fetching: ${href}`);
-    await fetchContentArrayBuffer(`${href}`, options)
-      .then((result) => {
-        if (!isNotNullish(result)) {
-          throw new Error('fetchContentArrayBuffer error!');
-        }
 
-        const articleDom = new JSDOM(result);
+    try {
+      const result = await fetchContentArrayBuffer(`${href}`, options);
 
-        const paywall = articleDom.window.document.querySelector('.paywall');
-        const paywallStyle = paywall?.getAttribute('style');
+      if (!isNotNullish(result)) {
+        throw new Error('fetchContentArrayBuffer error!');
+      }
 
-        const isPaywalled = paywallStyle?.includes('display: none') ?? false;
+      const articleDom = new JSDOM(result);
 
-        if (isPaywalled) throwCookieError();
+      const paywall = articleDom.window.document.querySelector('.paywall');
+      const paywallStyle = paywall?.getAttribute('style');
 
-        const article = articleDom.window.document.querySelector(
-          '.blog-article',
-        );
+      const isPaywalled = paywallStyle?.includes('display: none') ?? false;
 
-        if (article) {
-          // Clear cruft: purchase links, social share links, anchor link formatting
-          article
-            .querySelectorAll('.book-info__purchase-links')
-            .forEach((el) => {
-              // eslint-disable-next-line no-param-reassign
-              el.innerHTML = '';
-            });
-          article.querySelectorAll('af-share-toggle').forEach((el) => {
-            // eslint-disable-next-line no-param-reassign
-            el.innerHTML = '';
-          });
+      if (isPaywalled) throwCookieError();
 
-          const shareLinks = article.querySelectorAll('a.share');
+      const article = articleDom.window.document.querySelector('.blog-article');
 
-          shareLinks.forEach((el) => {
-            const parentNode = el.parentNode as HTMLElement | null;
+      if (article) {
+        // Clear cruft: purchase links, social share links, anchor link formatting
+        article.querySelectorAll('.book-info__purchase-links').forEach((el) => {
+          // eslint-disable-next-line no-param-reassign
+          el.innerHTML = '';
+        });
+        article.querySelectorAll('af-share-toggle').forEach((el) => {
+          // eslint-disable-next-line no-param-reassign
+          el.innerHTML = '';
+        });
 
-            if (isNotNullish(parentNode)) {
-              parentNode.innerHTML = el.innerHTML;
-            }
-          });
+        const shareLinks = article.querySelectorAll('a.share');
 
-          // Src in form //www, prepend for proper rendering outside of browser
-          article.querySelectorAll('img').forEach((image) => {
-            // eslint-disable-next-line no-param-reassign
-            image.src = `https:${image.src}`;
-          });
+        shareLinks.forEach((el) => {
+          const parentNode = el.parentNode as HTMLElement | null;
 
-          const articleString = `${dom.window.document.body.innerHTML}<div class="article-container">${article.innerHTML}</div>`;
+          if (isNotNullish(parentNode)) {
+            parentNode.innerHTML = el.innerHTML;
+          }
+        });
 
-          dom.window.document.body.innerHTML = articleString;
-        } else {
-          throw new Error('Unresolved path!');
-        }
-      })
-      .catch((err) => handleError(err));
+        // Src in form //www, prepend for proper rendering outside of browser
+        article.querySelectorAll('img').forEach((image) => {
+          // eslint-disable-next-line no-param-reassign
+          image.src = `https:${image.src}`;
+        });
+
+        const articleString = `${dom.window.document.body.innerHTML}<div class="article-container">${article.innerHTML}</div>`;
+
+        dom.window.document.body.innerHTML = articleString;
+      } else {
+        throw new Error('Unresolved path!');
+      }
+    } catch (e: unknown) {
+      handleError(e);
+    }
+    // .catch((err) => handleError(err));
   }
 
-  fs.writeFile(
-    `output/bookforum/${publicationName} - ${volumeNumberAndDate}.html`,
-    dom.window.document.body.innerHTML,
-    (err) => {
-      if (err) throw err;
-    },
-  );
+  try {
+    fs.writeFileSync(
+      `output/bookforum/${publicationName} - ${volumeNumberAndDate}.html`,
+      dom.window.document.body.innerHTML,
+    );
+  } catch (e: unknown) {
+    console.error(e);
+  }
 
   console.log('Fetching complete!');
 
@@ -111,39 +112,40 @@ export default async function bookforumParser(issueUrl: string) {
   const options = getOptions({ headers, issueUrl: `${issueUrl}` });
 
   // Get list of articles from the Table of Contents
-  return fetchContent(issueUrl, options).then(async (result) => {
-    if (!isNotNullish(result)) {
-      throw new Error('fetchContent error!');
-    }
 
-    const dom = new JSDOM(result);
+  const result = await fetchContent(issueUrl, options);
 
-    const articleLinks = dom.window.document.querySelectorAll<HTMLAnchorElement>(
-      '.toc-article__link',
-    );
+  if (!isNotNullish(result)) {
+    throw new Error('fetchContent error!');
+  }
 
-    // Clear duplicate links for feature headings
-    const hrefs = Array.from(
-      new Set(
-        Array.from(articleLinks)
-          .map((article) => {
-            // Safe check to confirm article is HTMLAnchorElement
-            if (article.href) {
-              return article.href;
-            }
+  const dom = new JSDOM(result);
 
-            return null;
-          })
-          .filter(isNotNullish),
-      ),
-    );
+  const articleLinks = dom.window.document.querySelectorAll<HTMLAnchorElement>(
+    '.toc-article__link',
+  );
 
-    const tocTitle = dom.window.document.querySelector('.toc-issue__title');
-    const titleContent = tocTitle?.textContent ?? '';
+  // Clear duplicate links for feature headings
+  const hrefs = Array.from(
+    new Set(
+      Array.from(articleLinks)
+        .map((article) => {
+          // Safe check to confirm article is HTMLAnchorElement
+          if (article.href) {
+            return article.href;
+          }
 
-    // Cleans bookforum format--"Sep/Oct/Nov"--since those aren't directories
-    const volumeNumberAndDate = titleContent.replace(/\//g, '-');
+          return null;
+        })
+        .filter(isNotNullish),
+    ),
+  );
 
-    return processHrefs(hrefs, volumeNumberAndDate, options);
-  });
+  const tocTitle = dom.window.document.querySelector('.toc-issue__title');
+  const titleContent = tocTitle?.textContent ?? '';
+
+  // Cleans bookforum format--"Sep/Oct/Nov"--since those aren't directories
+  const volumeNumberAndDate = titleContent.replace(/\//g, '-');
+
+  return processHrefs(hrefs, volumeNumberAndDate, options);
 }

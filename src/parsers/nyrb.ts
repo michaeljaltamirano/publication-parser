@@ -108,17 +108,20 @@ async function processHrefs(
         }<div class="article-container">${titleAndAuthorMarkup}${
           reviewedItems?.outerHTML ?? ''
         }${bodyMarkup}${authorInfo?.outerHTML ?? ''}</div>`;
+
+        return undefined;
       })
       .catch((error) => handleError(error));
   }
 
-  fs.writeFile(
-    `output/nyrb/${publicationName} - ${volumeNumberAndDate}.html`,
-    dom.window.document.body.innerHTML,
-    (error) => {
-      if (error) throw error;
-    },
-  );
+  try {
+    fs.writeFileSync(
+      `output/nyrb/${publicationName} - ${volumeNumberAndDate}.html`,
+      dom.window.document.body.innerHTML,
+    );
+  } catch (e: unknown) {
+    console.error(e);
+  }
 
   console.log('Fetching complete!');
 
@@ -137,25 +140,25 @@ export default async function nyrbParser(issueUrl: string) {
   const options = getOptions({ headers, issueUrl });
 
   // Get list of articles from the Table of Contents
-  return fetchContent(issueUrl, options).then(async (result) => {
-    if (!isNotNullish(result)) {
-      throw new Error('fetchContent error!');
-    }
+  const result = await fetchContent(issueUrl, options);
 
-    const dom = new JSDOM(result);
-    const tableOfContentsLinks = dom.window.document.querySelectorAll<HTMLAnchorElement>(
-      'a[href*="nybooks.com/articles"]',
-    );
-    const hrefs = Array.from(tableOfContentsLinks).map((link) => link.href);
+  if (!isNotNullish(result)) {
+    throw new Error('fetchContent error!');
+  }
 
-    const date = dom.window.document.querySelector<HTMLElement>(
-      'header.issue_header > p.h2',
-    )?.textContent;
+  const dom = new JSDOM(result);
+  const tableOfContentsLinks = dom.window.document.querySelectorAll<HTMLAnchorElement>(
+    'a[href*="nybooks.com/articles"]',
+  );
+  const hrefs = Array.from(tableOfContentsLinks).map((link) => link.href);
 
-    if (!isNotNullish(date)) {
-      throw new Error('Issue date parsing error');
-    }
+  const date = dom.window.document.querySelector<HTMLElement>(
+    'header.issue_header > p.h2',
+  )?.textContent;
 
-    return processHrefs(hrefs, date, options);
-  });
+  if (!isNotNullish(date)) {
+    throw new Error('Issue date parsing error');
+  }
+
+  return processHrefs(hrefs, date, options);
 }
