@@ -97,14 +97,15 @@ interface MailOptions {
 }
 
 async function send(mailOptions: MailOptions) {
-  await transporter
-    .sendMail(mailOptions)
-    .then((info: SESTransport.SentMessageInfo) => {
-      console.log(`Email sent: ${info.response}`);
-    })
-    .catch((error) => {
-      console.log(error);
-    });
+  try {
+    const info = (await transporter.sendMail(
+      mailOptions,
+    )) as SESTransport.SentMessageInfo;
+
+    console.log(`Email sent: ${info.response}`);
+  } catch (e: unknown) {
+    console.error(e);
+  }
 }
 
 async function sendEmail(

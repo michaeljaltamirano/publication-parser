@@ -544,10 +544,10 @@
     "@types/yargs" "^15.0.0"
     chalk "^4.0.0"
 
-"@michaeljaltamirano/eslint-plugin@^0.2.0":
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/@michaeljaltamirano/eslint-plugin/-/eslint-plugin-0.2.0.tgz#4c745eeea0396694f41fbfd6355b8dfe8c524c65"
-  integrity sha512-SpE5YENTxSgITK0oUgEvOI6R9loGmptQbOJ4xD8llyNzHYTfvmNQyoUtB6fbNI+MkxAP+NyZHggw8zssJ06qkw==
+"@michaeljaltamirano/eslint-plugin@^0.3.0":
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/@michaeljaltamirano/eslint-plugin/-/eslint-plugin-0.3.0.tgz#e61643ca3cc33ef15f795192d5a11c362780e624"
+  integrity sha512-z1skSbEhAThAbl+e+kRsU6dzVw9xUJiS3CGgZhemGE5f+3QDw/DXEB4PgOT4Psd38gz7X0WDmDrI4y+Q2sAc1Q==
 
 "@nodelib/fs.scandir@2.1.3":
   version "2.1.3"
@@ -1946,6 +1946,11 @@ eslint-plugin-prettier@^3.3.1:
   integrity sha512-Rq3jkcFY8RYeQLgk2cCwuc0P7SEFwDravPhsJZOQ5N4YI4DSg50NyqJ/9gdZHzQlHf8MvafSesbNJCcP/FF6pQ==
   dependencies:
     prettier-linter-helpers "^1.0.0"
+
+eslint-plugin-promise@^4.3.1:
+  version "4.3.1"
+  resolved "https://registry.yarnpkg.com/eslint-plugin-promise/-/eslint-plugin-promise-4.3.1.tgz#61485df2a359e03149fdafc0a68b0e030ad2ac45"
+  integrity sha512-bY2sGqyptzFBDLh/GMbAxfdJC+b0f23ME63FOE4+Jao0oZ3E1LEwFtWJX/1pGMJLiTtrSSern2CRM/g+dfc0eQ==
 
 eslint-plugin-react-hooks@^4.2.0:
   version "4.2.0"
