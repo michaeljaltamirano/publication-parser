@@ -17,6 +17,37 @@ const publicationName = 'Bookforum';
 // const cookie = "bfsid=XXX; login=XXX";
 const { bookforumCookie: cookie } = ENV;
 
+const getArticleString = (article: Element) => {
+  // Clear cruft: purchase links, social share links, anchor link formatting
+  article.querySelectorAll('.book-info__purchase-links').forEach((el) => {
+    // eslint-disable-next-line no-param-reassign
+    el.innerHTML = '';
+  });
+
+  article.querySelectorAll('af-share-toggle').forEach((el) => {
+    // eslint-disable-next-line no-param-reassign
+    el.innerHTML = '';
+  });
+
+  const shareLinks = article.querySelectorAll('a.share');
+
+  shareLinks.forEach((el) => {
+    const parentNode = el.parentNode as HTMLElement | null;
+
+    if (isNotNullish(parentNode)) {
+      parentNode.innerHTML = el.innerHTML;
+    }
+  });
+
+  // Src in form //www, prepend for proper rendering outside of browser
+  article.querySelectorAll('img').forEach((image) => {
+    // eslint-disable-next-line no-param-reassign
+    image.src = `https:${image.src}`;
+  });
+
+  return `<div class="article-container">${article.innerHTML}</div>`;
+};
+
 async function processHrefs(
   hrefs: string[],
   volumeNumberAndDate: string,
@@ -48,42 +79,15 @@ async function processHrefs(
       const article = articleDom.window.document.querySelector('.blog-article');
 
       if (article) {
-        // Clear cruft: purchase links, social share links, anchor link formatting
-        article.querySelectorAll('.book-info__purchase-links').forEach((el) => {
-          // eslint-disable-next-line no-param-reassign
-          el.innerHTML = '';
-        });
-        article.querySelectorAll('af-share-toggle').forEach((el) => {
-          // eslint-disable-next-line no-param-reassign
-          el.innerHTML = '';
-        });
+        const articleString = getArticleString(article);
 
-        const shareLinks = article.querySelectorAll('a.share');
-
-        shareLinks.forEach((el) => {
-          const parentNode = el.parentNode as HTMLElement | null;
-
-          if (isNotNullish(parentNode)) {
-            parentNode.innerHTML = el.innerHTML;
-          }
-        });
-
-        // Src in form //www, prepend for proper rendering outside of browser
-        article.querySelectorAll('img').forEach((image) => {
-          // eslint-disable-next-line no-param-reassign
-          image.src = `https:${image.src}`;
-        });
-
-        const articleString = `${dom.window.document.body.innerHTML}<div class="article-container">${article.innerHTML}</div>`;
-
-        dom.window.document.body.innerHTML = articleString;
+        dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}${articleString}`;
       } else {
         throw new Error('Unresolved path!');
       }
     } catch (e: unknown) {
       handleError(e);
     }
-    // .catch((err) => handleError(err));
   }
 
   try {

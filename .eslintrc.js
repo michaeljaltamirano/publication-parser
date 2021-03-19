@@ -6,7 +6,11 @@ module.exports = {
     node: true,
     jest: false,
   },
-  extends: ['plugin:@michaeljaltamirano/all'],
+  extends: [
+    'plugin:@michaeljaltamirano/base',
+    'plugin:@michaeljaltamirano/typescript',
+    'plugin:@michaeljaltamirano/prettier',
+  ],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 12,
@@ -14,19 +18,12 @@ module.exports = {
     project: './tsconfig.json',
   },
   rules: {
-    '@typescript-eslint/explicit-function-return-type': 0,
-    '@typescript-eslint/explicit-module-boundary-types': 0,
-    '@typescript-eslint/no-unused-vars': [
-      2,
-      {
-        argsIgnorePattern: '^_',
-      },
-    ],
     'import/prefer-default-export': 'off',
     'import/no-unresolved': 'off',
     'import/extensions': 'off',
+    'no-await-in-loop': 'off',
     'no-console': 'off',
     'no-restricted-syntax': 'off',
-    'no-await-in-loop': 'off',
+    'no-param-reassign': 'off',
   },
 };

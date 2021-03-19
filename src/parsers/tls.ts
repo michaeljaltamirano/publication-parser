@@ -44,20 +44,139 @@ const getArticleDetails = (details: ArticleBody) => {
   };
 };
 
-const getHeadingDetails = (details: ArticleBody) => {
+const getIntro = (subject: string, details: ArticleBody) => {
   const { byline, headline, standfirst: subheadline } = details;
 
-  return {
-    byline,
-    headline,
-    subheadline,
-  };
+  return `
+  <h4>${subject}</h4><br>
+  <h2>${headline}</h2><br>
+  <h3>${subheadline}</h3><br>
+  ${byline.text ? `<h5>By ${byline.text}</h5><br>` : ''}
+`;
 };
 
 const PAYWALL_ERROR = -1;
 const FALSY_INDEX_OF = -1;
 const STRING_START = 0;
 const IFRAME_END_INDEX = 9;
+
+interface ArticleData {
+  articleIntroPrimary: ArticleBody;
+  bookdetails?: {
+    authordetails: string;
+    bookdetails: string;
+    booktitle: string;
+    imageurl: boolean;
+    publisherdetails: string | '';
+  }[];
+  content: string;
+  leadimage?: {
+    imagecaption: string | '';
+    imagecredit: string | '';
+    url: string | '';
+  };
+  paywallBanner: {
+    loginUrl?: string;
+    subscribeUrl?: string;
+    text?: string;
+  };
+  paywallStatus: number;
+  topics: [];
+}
+
+async function getArticleData(postId: string) {
+  const articleData = await nodeFetch(
+    `https://www.the-tls.co.uk/wp-json/tls/v2/single-article/${postId.replace(
+      /\D/g,
+      '',
+    )}`,
+  );
+
+  const {
+    articleIntroPrimary,
+    bookdetails,
+    content,
+    leadimage,
+    paywallBanner,
+    paywallStatus,
+  } = (await articleData.json()) as ArticleData;
+
+  return {
+    articleIntroPrimary,
+    bookdetails,
+    content,
+    leadimage,
+    paywallBanner,
+    paywallStatus,
+  };
+}
+
+function cleanAffiliatedLinks(cleanContent: string) {
+  if (
+    cleanContent.indexOf(
+      '<p><a href="https://www.google.com/url?q=https://shop.the-tls.co.uk/tls-latest-reviews',
+    )
+  ) {
+    const [newCleanContent] = cleanContent.split(
+      '<p><a href="https://www.google.com/url?q=https://shop.the-tls.co.uk/tls-latest-reviews',
+    );
+
+    if (isNotNullish(newCleanContent)) {
+      cleanContent = newCleanContent;
+    }
+  }
+
+  if (
+    cleanContent.indexOf(
+      '<p><a href="https://shop.the-tls.co.uk/tls-latest-reviews/',
+    )
+  ) {
+    const [newCleanContent] = cleanContent.split(
+      '<p><a href="https://shop.the-tls.co.uk/tls-latest-reviews/',
+    );
+    if (isNotNullish(newCleanContent)) {
+      cleanContent = newCleanContent;
+    }
+  }
+
+  return cleanContent;
+}
+
+const getIntroImage = (leadimage: ArticleData['leadimage']) =>
+  leadimage
+    ? `
+    <div>
+        <img src=${leadimage.url}></img>
+        <span>${leadimage.imagecaption}</span>
+    </div>
+`
+    : '';
+
+const getReviewedItems = (bookdetails: ArticleData['bookdetails']) =>
+  bookdetails
+    ? bookdetails.map(
+        ({ authordetails, bookdetails: innerBookDetails, booktitle }) => {
+          return `
+        <span>${booktitle}</span>
+        <span>${innerBookDetails}</span>
+        <span>By ${authordetails}</span>
+    `;
+        },
+      )
+    : [];
+
+const getReviewBody = (reviewedItems: string[]) =>
+  reviewedItems.length
+    ? `
+    <div>
+        <span>In this Review:</span>
+
+        <div>
+            ${reviewedItems.join('<br>')}
+        </div>
+    </div>
+`
+    : '';
 
 async function processHrefs(
   hrefs: string[],
@@ -89,35 +208,6 @@ async function processHrefs(
 
       if (!isNotNullish(postId)) throw new Error('no postid found');
 
-      const articleData = await nodeFetch(
-        `https://www.the-tls.co.uk/wp-json/tls/v2/single-article/${postId.replace(
-          /\D/g,
-          '',
-        )}`,
-      ).then<{
-        articleIntroPrimary: ArticleBody;
-        bookdetails?: {
-          authordetails: string;
-          bookdetails: string;
-          booktitle: string;
-          imageurl: boolean;
-          publisherdetails: string | '';
-        }[];
-        content: string;
-        leadimage?: {
-          imagecaption: string | '';
-          imagecredit: string | '';
-          url: string | '';
-        };
-        paywallBanner: {
-          loginUrl?: string;
-          subscribeUrl?: string;
-          text?: string;
-        };
-        paywallStatus: number;
-        topics: [];
-      }>(async (res) => res.json());
-
       const {
         articleIntroPrimary,
         bookdetails,
@@ -125,7 +215,7 @@ async function processHrefs(
         leadimage,
         paywallBanner,
         paywallStatus,
-      } = articleData;
+      } = await getArticleData(postId);
 
       if (paywallStatus === PAYWALL_ERROR || isNotNullish(paywallBanner.text))
         throwCookieError();
@@ -134,54 +224,18 @@ async function processHrefs(
 
       const subject = `${text} | ${articletype}`;
 
-      const { byline, headline, subheadline } = getHeadingDetails(
-        articleIntroPrimary,
-      );
+      const intro = getIntro(subject, articleIntroPrimary);
 
-      const intro = `
-            <h4>${subject}</h4><br>
-            <h2>${headline}</h2><br>
-            <h3>${subheadline}</h3><br>
-            ${byline.text ? `<h5>By ${byline.text}</h5><br>` : ''}
-        `;
+      const introImage = getIntroImage(leadimage);
 
-      const introImage = leadimage
-        ? `
-            <div>
-                <img src=${leadimage.url}></img>
-                <span>${leadimage.imagecaption}</span>
-            </div>
-        `
-        : '';
-
-      const reviewedItems = bookdetails
-        ? bookdetails.map(
-            ({ authordetails, bookdetails: innerBookDetails, booktitle }) => {
-              return `
-                <span>${booktitle}</span>
-                <span>${innerBookDetails}</span>
-                <span>By ${authordetails}</span>
-            `;
-            },
-          )
-        : [];
+      const reviewedItems = getReviewedItems(bookdetails);
 
       // TODO: Determine what this was fixing
       // const cleanedReviewedItems = reviewedItems.filter(
       //   (item) => item != null,
       // );
 
-      const reviewBody = reviewedItems.length
-        ? `
-            <div>
-                <span>In this Review:</span>
-
-                <div>
-                    ${reviewedItems.join('<br>')}
-                </div>
-            </div>
-        `
-        : '';
+      const reviewBody = getReviewBody(reviewedItems);
 
       // Remove iframe details
       const iframeStart = content.indexOf('<div class="tls-newsletter-iframe"');
@@ -196,35 +250,7 @@ async function processHrefs(
         cleanContent = start + remainder;
       }
 
-      /**
-       * Clean up affiliated link
-       */
-      if (
-        cleanContent.indexOf(
-          '<p><a href="https://www.google.com/url?q=https://shop.the-tls.co.uk/tls-latest-reviews',
-        )
-      ) {
-        const [newCleanContent] = cleanContent.split(
-          '<p><a href="https://www.google.com/url?q=https://shop.the-tls.co.uk/tls-latest-reviews',
-        );
-
-        if (isNotNullish(newCleanContent)) {
-          cleanContent = newCleanContent;
-        }
-      }
-
-      if (
-        cleanContent.indexOf(
-          '<p><a href="https://shop.the-tls.co.uk/tls-latest-reviews/',
-        )
-      ) {
-        const [newCleanContent] = cleanContent.split(
-          '<p><a href="https://shop.the-tls.co.uk/tls-latest-reviews/',
-        );
-        if (isNotNullish(newCleanContent)) {
-          cleanContent = newCleanContent;
-        }
-      }
+      cleanContent = cleanAffiliatedLinks(cleanContent);
 
       const contentBody = `
             <div>${cleanContent}</div>
@@ -256,6 +282,21 @@ async function processHrefs(
   };
 }
 
+interface IssueData {
+  contents: Record<
+    string,
+    {
+      articleslist: { url: string }[];
+    }
+  >;
+  featuredarticle: { url: string };
+  highlights: { url: string }[]; // repeated in contents
+  issuedateline: {
+    issuedate: string;
+    issuenumber: string;
+  };
+}
+
 export default async function tlsParser(issueUrl: string) {
   const headers = {
     cookie,
@@ -278,28 +319,14 @@ export default async function tlsParser(issueUrl: string) {
 
   if (!isNotNullish(postId)) throw new Error('no postid found');
 
-  const issueData = await nodeFetch(
+  const rawIssueData = await nodeFetch(
     `https://www.the-tls.co.uk/wp-json/tls/v2/contents-page/${postId.replace(
       /\D/g,
       '',
     )}`,
-  ).then(
-    async (res) =>
-      res.json() as Promise<{
-        contents: Record<
-          string,
-          {
-            articleslist: { url: string }[];
-          }
-        >;
-        featuredarticle: { url: string };
-        highlights: { url: string }[]; // repeated in contents
-        issuedateline: {
-          issuedate: string;
-          issuenumber: string;
-        };
-      }>,
   );
+
+  const issueData = (await rawIssueData.json()) as IssueData;
 
   const hrefs: string[] = [];
 
