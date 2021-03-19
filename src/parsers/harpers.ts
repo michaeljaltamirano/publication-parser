@@ -15,6 +15,187 @@ const publicationName = "Harper's Magazine";
 // const cookie = "wordpress_logged_in_XXX=XXX";
 const { harpersCookie: cookie } = ENV;
 
+const getFeatureArticleContent = (articleLayoutFeature: Element) => {
+  const newArticleLayoutFeature = articleLayoutFeature.cloneNode(
+    true,
+  ) as Element;
+
+  const featureLayoutHeader =
+    newArticleLayoutFeature.querySelector('.title-header.desktop')?.outerHTML ??
+    '';
+
+  const picture = newArticleLayoutFeature.querySelector('.article-hero-img');
+  const pictureMarkup = picture?.outerHTML ?? '';
+
+  const flexSections = newArticleLayoutFeature.querySelector('.flex-sections');
+
+  if (flexSections) {
+    // Remove sidebar ad + other content
+    const sidebarsMd = flexSections.querySelectorAll('.col-md-4');
+    sidebarsMd.forEach((section) => {
+      section.remove();
+    });
+    const sidebarsLg = flexSections.querySelectorAll('.col-lg-4');
+    sidebarsLg.forEach((section) => {
+      section.remove();
+    });
+    const afterPostContent = flexSections.querySelectorAll(
+      '.after-post-content',
+    );
+    afterPostContent.forEach((section) => {
+      section.remove();
+    });
+    const controls = flexSections.querySelectorAll(
+      '.header-meta.header-controls',
+    );
+    controls.forEach((section) => {
+      section.remove();
+    });
+
+    const content = Array.from(flexSections.children).reduce(
+      (article, contentBlock) => {
+        if (Array.from(contentBlock.classList).includes('after-post-content')) {
+          return article;
+        }
+
+        let newString = article;
+
+        if (contentBlock.outerHTML) {
+          newString += contentBlock.outerHTML;
+        }
+
+        return newString;
+      },
+      '',
+    );
+
+    return { featureLayoutHeader, pictureMarkup, content };
+  }
+
+  throw new Error('no flexSections found');
+};
+
+const getSimpleArticleContent = (articleLayoutSimple: Element) => {
+  const newArticleLayoutSimple = articleLayoutSimple.cloneNode(true) as Element;
+
+  const simpleLayoutHeader = newArticleLayoutSimple.querySelector(
+    '.article-header',
+  );
+
+  const headerMeta = simpleLayoutHeader?.querySelector('.header-meta');
+  // Remove share article text
+  headerMeta?.remove();
+
+  const content = newArticleLayoutSimple.querySelectorAll<HTMLElement>(
+    '.wysiwyg-content',
+  );
+
+  // Remove email signup block
+  content.forEach((contentBlock) => {
+    const afterPostContent = contentBlock.querySelectorAll(
+      '.after-post-content',
+    );
+
+    afterPostContent.forEach((section) => {
+      section.remove();
+    });
+  });
+
+  const combinedContent = Array.from(content).reduce((acc, arrContent) => {
+    const additional = Array.from(arrContent.children).reduce(
+      (article, contentBlock) => {
+        return article + contentBlock.outerHTML;
+      },
+      '',
+    );
+
+    return acc + additional;
+  }, '');
+
+  return {
+    simpleLayoutHeader: simpleLayoutHeader?.outerHTML ?? '',
+    combinedContent,
+  };
+};
+
+const getHarpersIndex = (harpersIndex: Element) => {
+  const heading = harpersIndex.querySelector('h1');
+  const headingMarkup = heading?.outerHTML ?? '';
+  const body = harpersIndex.querySelector('.page-container');
+
+  if (!body) {
+    throw new Error("Harper's Index error!");
+  }
+
+  const linkedSources = body.querySelectorAll('.index-tooltip');
+  linkedSources.forEach((linkedSource) => {
+    linkedSource.remove();
+  });
+
+  return { headingMarkup, body };
+};
+
+const processContent = (articleDom: jsdom.JSDOM, dom: jsdom.JSDOM) => {
+  const articleLayoutFeature = articleDom.window.document.querySelector(
+    '.article-layout-featured',
+  );
+
+  if (articleLayoutFeature) {
+    const {
+      featureLayoutHeader,
+      pictureMarkup,
+      content,
+    } = getFeatureArticleContent(articleLayoutFeature);
+
+    dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article>${featureLayoutHeader}${pictureMarkup}${content}</article>`;
+
+    return undefined;
+  }
+
+  const articleLayoutSimple = articleDom.window.document.querySelector(
+    '.article-layout-simple',
+  );
+
+  if (articleLayoutSimple) {
+    const { simpleLayoutHeader, combinedContent } = getSimpleArticleContent(
+      articleLayoutSimple,
+    );
+
+    dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article>${simpleLayoutHeader}${combinedContent}</article>`;
+
+    return undefined;
+  }
+
+  const harpersIndex = articleDom.window.document.querySelector(
+    '.post-type-archive-index',
+  );
+
+  if (harpersIndex) {
+    const { headingMarkup, body } = getHarpersIndex(harpersIndex);
+
+    dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article>${headingMarkup}${body.outerHTML}</article>`;
+    return undefined;
+  }
+
+  const findings = articleDom.window.document.querySelector(
+    '.article-layout-finding',
+  );
+
+  if (findings) {
+    const content = findings.querySelector('.flex-sections');
+
+    if (!content) {
+      throw new Error('Findings error!');
+    }
+
+    dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article><${content.outerHTML}</article>`;
+
+    return undefined;
+  }
+
+  throw new Error('Unresolved path!');
+};
+
 async function processHrefs(
   hrefs: string[],
   volumeNumberAndDate: string,
@@ -26,187 +207,25 @@ async function processHrefs(
   for (const href of hrefs) {
     // Get articles
     console.log(`Fetching: ${href}`);
-    await fetchContent(href, options)
-      .then((result) => {
-        if (!isNotNullish(result)) {
-          throw new Error('fetchContent error!');
-        }
 
-        const articleDom = new JSDOM(result);
+    try {
+      const result = await fetchContent(href, options);
+      if (!isNotNullish(result)) {
+        throw new Error('fetchContent error!');
+      }
 
-        const paywall = articleDom.window.document.getElementById(
-          'leaky_paywall_message',
-        );
+      const articleDom = new JSDOM(result);
 
-        if (paywall) throwCookieError();
+      const paywall = articleDom.window.document.getElementById(
+        'leaky_paywall_message',
+      );
 
-        const articleLayoutSimple = articleDom.window.document.querySelector(
-          '.article-layout-simple',
-        );
-        const articleLayoutFeature = articleDom.window.document.querySelector(
-          '.article-layout-featured',
-        );
+      if (paywall) throwCookieError();
 
-        const harpersIndex = articleDom.window.document.querySelector(
-          '.post-type-archive-index',
-        );
-
-        const findings = articleDom.window.document.querySelector(
-          '.article-layout-finding',
-        );
-
-        if (articleLayoutFeature) {
-          const featureLayoutHeader = articleLayoutFeature.querySelector(
-            '.title-header.desktop',
-          );
-
-          const picture = articleLayoutFeature.querySelector(
-            '.article-hero-img',
-          );
-          const pictureMarkup = picture?.outerHTML ?? '';
-
-          const flexSections = articleLayoutFeature.querySelector(
-            '.flex-sections',
-          );
-
-          if (flexSections) {
-            // Remove sidebar ad + other content
-            const sidebarsMd = flexSections.querySelectorAll('.col-md-4');
-            sidebarsMd.forEach((section) => {
-              section.remove();
-            });
-            const sidebarsLg = flexSections.querySelectorAll('.col-lg-4');
-            sidebarsLg.forEach((section) => {
-              section.remove();
-            });
-            const afterPostContent = flexSections.querySelectorAll(
-              '.after-post-content',
-            );
-            afterPostContent.forEach((section) => {
-              section.remove();
-            });
-            const controls = flexSections.querySelectorAll(
-              '.header-meta.header-controls',
-            );
-            controls.forEach((section) => {
-              section.remove();
-            });
-
-            const content = Array.from(flexSections.children).reduce(
-              (article, contentBlock) => {
-                if (
-                  Array.from(contentBlock.classList).includes(
-                    'after-post-content',
-                  )
-                ) {
-                  return article;
-                }
-
-                let newString = article;
-
-                if (contentBlock.outerHTML) {
-                  newString += contentBlock.outerHTML;
-                }
-
-                return newString;
-              },
-              '',
-            );
-
-            dom.window.document.body.innerHTML = `${
-              dom.window.document.body.innerHTML
-            }<article>${
-              featureLayoutHeader?.outerHTML ?? ''
-            }${pictureMarkup}${content}</article>`;
-
-            return undefined;
-          }
-          console.error('no flexSections found');
-
-          return undefined;
-        }
-        if (articleLayoutSimple) {
-          const simpleLayoutHeader = articleLayoutSimple.querySelector(
-            '.article-header',
-          );
-
-          const headerMeta = simpleLayoutHeader?.querySelector('.header-meta');
-          // Remove share article text
-          headerMeta?.remove();
-
-          const content = articleLayoutSimple.querySelectorAll<HTMLElement>(
-            '.wysiwyg-content',
-          );
-
-          // Remove email signup block
-          content.forEach((contentBlock) => {
-            const afterPostContent = contentBlock.querySelectorAll(
-              '.after-post-content',
-            );
-
-            afterPostContent.forEach((section) => {
-              section.remove();
-            });
-          });
-
-          const combinedContent = Array.from(content).reduce(
-            (acc, arrContent) => {
-              const additional = Array.from(arrContent.children).reduce(
-                (article, contentBlock) => {
-                  const newArticle = article + contentBlock.outerHTML;
-                  return newArticle;
-                },
-                '',
-              );
-
-              const newAcc = acc + additional;
-
-              return newAcc;
-            },
-            '',
-          );
-
-          dom.window.document.body.innerHTML = `${
-            dom.window.document.body.innerHTML
-          }<article>${
-            simpleLayoutHeader?.outerHTML ?? ''
-          }${combinedContent}</article>`;
-
-          return undefined;
-        }
-        if (harpersIndex) {
-          const heading = harpersIndex.querySelector('h1');
-          const headingMarkup = heading?.outerHTML ?? '';
-          const body = harpersIndex.querySelector('.page-container');
-
-          if (!body) {
-            throw new Error("Harper's Index error!");
-          }
-
-          const linkedSources = body.querySelectorAll('.index-tooltip');
-          linkedSources.forEach((linkedSource) => {
-            linkedSource.remove();
-          });
-
-          dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article>${headingMarkup}${body.outerHTML}</article>`;
-          return undefined;
-        }
-
-        if (findings) {
-          const content = findings.querySelector('.flex-sections');
-
-          if (!content) {
-            throw new Error('Findings error!');
-          }
-
-          dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article><${content.outerHTML}</article>`;
-
-          return undefined;
-        }
-
-        throw new Error('Unresolved path!');
-      })
-      .catch((error) => handleError(error));
+      processContent(articleDom, dom);
+    } catch (e: unknown) {
+      handleError(e);
+    }
   }
 
   try {

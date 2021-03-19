@@ -18,137 +18,163 @@ const { lrbCookie: cookie } = ENV;
 
 const MIN_LENGTH = 0;
 
+const generateNewJSDOM = () => new JSDOM('<!DOCTYPE html>');
+
+const getReviewedItemsContent = (
+  reviewedItemsHolder: Element,
+  reviewedItems: Element,
+) => {
+  const newReviewedItems = reviewedItems.cloneNode(true) as Element;
+
+  // Remove show more link
+  const showMores = reviewedItemsHolder.querySelectorAll('.lrb-readmorelink');
+
+  if (showMores.length > MIN_LENGTH)
+    showMores.forEach((showMoreLink) => {
+      showMoreLink.remove();
+    });
+
+  // Clean info
+  const reviewedItemsChildNodes = newReviewedItems.childNodes as NodeListOf<HTMLElement>;
+
+  reviewedItemsChildNodes.forEach((review) => {
+    const by = review.querySelector('.by');
+
+    if (by) {
+      const meta = by.querySelector('.item-meta');
+
+      // If there's book info, remove it
+      if (isNotNullish(meta) && meta.querySelector('.nowrap')) {
+        by.removeChild(meta);
+      }
+    }
+  });
+
+  return newReviewedItems;
+};
+
+const processArticle = (
+  articleHeader: HTMLElement,
+  articleDom: jsdom.JSDOM,
+  dom: jsdom.JSDOM,
+) => {
+  const h1 = articleHeader.firstChild?.textContent ?? '';
+  const h2 = articleHeader.lastChild?.textContent ?? '';
+  const reviewedItemsHolder = articleDom.window.document.querySelector(
+    '.reviewed-items-holder',
+  );
+
+  let reviewedItemsContent = {
+    innerHTML: '',
+  };
+
+  if (reviewedItemsHolder) {
+    const reviewedItems = articleDom.window.document.querySelector(
+      '.reviewed-items',
+    );
+
+    if (reviewedItems) {
+      reviewedItemsContent = getReviewedItemsContent(
+        reviewedItemsHolder,
+        reviewedItems,
+      );
+    }
+  }
+
+  const body = articleDom.window.document.querySelector('.article-copy');
+
+  // Remove subscriber mask
+  const articleMask = body?.querySelector('.article-mask');
+  if (articleMask) body?.removeChild(articleMask);
+
+  // If there's images, correctly load them
+  body?.querySelectorAll('img').forEach((img) => {
+    const appsrc = img.getAttribute('data-appsrc');
+
+    if (isNotNullish(appsrc)) {
+      // eslint-disable-next-line no-param-reassign
+      img.src = `http://www.lrb.co.uk${appsrc}`;
+    }
+  });
+
+  const innerHTMLWithArticle = `${
+    dom.window.document.body.innerHTML
+  }<div><h1>${h1}</h1><h2>${h2}</h2></div><div>${
+    reviewedItemsContent.innerHTML
+  }</div><div>${body?.innerHTML ?? ''}</div><br>End Article<br>`;
+
+  dom.window.document.body.innerHTML = innerHTMLWithArticle;
+};
+
+const processContent = (articleDom: jsdom.JSDOM, dom: jsdom.JSDOM) => {
+  // If present, parse letters-specific page
+  const lettersHeader = articleDom.window.document.getElementById(
+    'letters-heading-holder',
+  );
+
+  if (lettersHeader) {
+    const letters = articleDom.window.document.getElementById(
+      'lrb-lettersCopy',
+    );
+
+    const lettersHeaderFirstChild = lettersHeader.firstChild as HTMLElement | null;
+
+    dom.window.document.body.innerHTML = `${
+      dom.window.document.body.innerHTML
+    }<h1>${lettersHeaderFirstChild?.innerHTML ?? ''}</h1><div>${
+      letters?.innerHTML ?? ''
+    }</div><br>End Letters<br>`;
+
+    return undefined;
+  }
+
+  // Otherwise, parse regular article
+  const articleHeader = articleDom.window.document.getElementById(
+    'article-heading-holder',
+  );
+
+  if (articleHeader) {
+    processArticle(articleHeader, articleDom, dom);
+
+    return undefined;
+  }
+
+  throw new Error('Unresolved path!');
+};
+
 async function processHrefs(
   hrefs: string[],
   volumeNumberAndDate: string,
   options: ReturnType<typeof getOptions>,
 ) {
-  const dom = new JSDOM('<!DOCTYPE html>');
+  const dom = generateNewJSDOM();
 
   dom.window.document.body.innerHTML = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
 
   for (const item of hrefs) {
     // Get articles
     console.log(`Fetching: ${baseUrl}${item}`);
-    await fetchContent(`${baseUrl}${item}`, options)
-      .then((result) => {
-        if (!isNotNullish(result)) {
-          throw new Error('fetchContent error!');
-        }
 
-        const articleDom = new JSDOM('<!DOCTYPE html>');
-        articleDom.window.document.body.innerHTML = result;
+    try {
+      const result = await fetchContent(`${baseUrl}${item}`, options);
 
-        const isPaywalled = !!articleDom.window.document.getElementById(
-          'lrb-pw-block',
-        );
+      if (!isNotNullish(result)) {
+        throw new Error('fetchContent error!');
+      }
 
-        if (isPaywalled) throwCookieError();
+      const articleDom = generateNewJSDOM();
+      articleDom.window.document.body.innerHTML = result;
 
-        // If present, parse letters-specific page
-        const lettersHeader = articleDom.window.document.getElementById(
-          'letters-heading-holder',
-        );
+      const isPaywalled = !!articleDom.window.document.getElementById(
+        'lrb-pw-block',
+      );
 
-        // Otherwise, parse regular article
-        const articleHeader = articleDom.window.document.getElementById(
-          'article-heading-holder',
-        );
+      if (isPaywalled) throwCookieError();
 
-        if (lettersHeader) {
-          const letters = articleDom.window.document.getElementById(
-            'lrb-lettersCopy',
-          );
-
-          const lettersHeaderFirstChild = lettersHeader.firstChild as HTMLElement | null;
-
-          dom.window.document.body.innerHTML = `${
-            dom.window.document.body.innerHTML
-          }<h1>${lettersHeaderFirstChild?.innerHTML ?? ''}</h1><div>${
-            letters?.innerHTML ?? ''
-          }</div><br>End Letters<br>`;
-
-          return undefined;
-        }
-
-        if (articleHeader) {
-          const h1 = articleHeader.firstChild?.textContent ?? '';
-          const h2 = articleHeader.lastChild?.textContent ?? '';
-          const reviewedItemsHolder = articleDom.window.document.querySelector(
-            '.reviewed-items-holder',
-          );
-          let reviewedItemsContent = {
-            innerHTML: '',
-          };
-
-          if (reviewedItemsHolder) {
-            const reviewedItems = articleDom.window.document.querySelector(
-              '.reviewed-items',
-            );
-
-            if (reviewedItems) {
-              // Remove show more link
-              const showMores = reviewedItemsHolder.querySelectorAll(
-                '.lrb-readmorelink',
-              );
-
-              if (showMores.length > MIN_LENGTH)
-                showMores.forEach((showMoreLink) => {
-                  showMoreLink.remove();
-                });
-
-              // Clean info
-              const reviewedItemsChildNodes = reviewedItems.childNodes as NodeListOf<HTMLElement>;
-
-              reviewedItemsChildNodes.forEach((review) => {
-                const by = review.querySelector('.by');
-
-                if (by) {
-                  const meta = by.querySelector('.item-meta');
-
-                  // If there's book info, remove it
-                  if (isNotNullish(meta) && meta.querySelector('.nowrap')) {
-                    by.removeChild(meta);
-                  }
-                }
-              });
-
-              reviewedItemsContent = reviewedItems;
-            }
-          }
-
-          const body = articleDom.window.document.querySelector(
-            '.article-copy',
-          );
-
-          // Remove subscriber mask
-          const articleMask = body?.querySelector('.article-mask');
-          if (articleMask) body?.removeChild(articleMask);
-
-          // If there's images, correctly load them
-          body?.querySelectorAll('img').forEach((img) => {
-            const appsrc = img.getAttribute('data-appsrc');
-
-            if (isNotNullish(appsrc)) {
-              // eslint-disable-next-line no-param-reassign
-              img.src = `http://www.lrb.co.uk${appsrc}`;
-            }
-          });
-
-          const innerHTMLWithArticle = `${
-            dom.window.document.body.innerHTML
-          }<div><h1>${h1}</h1><h2>${h2}</h2></div><div>${
-            reviewedItemsContent.innerHTML
-          }</div><div>${body?.innerHTML ?? ''}</div><br>End Article<br>`;
-
-          dom.window.document.body.innerHTML = innerHTMLWithArticle;
-
-          return undefined;
-        }
-
-        throw new Error('Unresolved path!');
-      })
-      .catch((err) => handleError(err));
+      processContent(articleDom, dom);
+    } catch (e: unknown) {
+      handleError(e);
+    }
   }
 
   try {
@@ -198,7 +224,7 @@ export default async function lrbParser(issueUrl: string) {
       '</div><div class="toc-cover-artist">',
     ) ?? [];
 
-  const dateDom = new JSDOM('<!DOCTYPE html>');
+  const dateDom = generateNewJSDOM();
 
   dateDom.window.document.body.innerHTML = `<div id="date-and-volume">${
     secondDateSplit[FIRST_SPLIT_INDEX] ?? ''
@@ -218,7 +244,7 @@ export default async function lrbParser(issueUrl: string) {
       '</div><div class="toc-cover-artist toc-cover-artist--footer" aria-hidden="true">',
     ) ?? [];
 
-  const dom = new JSDOM('<!DOCTYPE html>');
+  const dom = generateNewJSDOM();
   dom.window.document.body.innerHTML = secondSplit[FIRST_SPLIT_INDEX] ?? '';
 
   const linksDiv = dom.window.document.body.querySelector('.toc-grid-items');
