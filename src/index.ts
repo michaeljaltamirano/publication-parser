@@ -25,6 +25,7 @@ interface GetPublicationInfoReturnType {
   publicationParser: (
     issueUrl: string,
   ) => Promise<{
+    epub: Buffer;
     html: string;
     publicationName: string;
     volumeNumberAndDate: string;
@@ -87,8 +88,8 @@ const transporter = nodemailer.createTransport({
 
 interface MailOptions {
   attachments: {
-    content: string;
-    contentType: string;
+    content: string | Buffer;
+    contentType?: string;
     filename: string;
   }[];
   from: string;
@@ -123,12 +124,13 @@ rl.question(
     );
 
     rl.question(
-      `\nPlease enter the full URL for the LRB or NYRB issue you would like to scrape (e.g. ${exampleUrl})\n\n  Answer: `,
+      `\nPlease enter the full URL for the ${shorthand} issue you would like to scrape (e.g. ${exampleUrl})\n\n  Answer: `,
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
       async (issueUrl) => {
         try {
           const {
             html,
+            epub,
             volumeNumberAndDate,
             publicationName,
           } = await publicationParser(issueUrl);
@@ -149,6 +151,10 @@ rl.question(
                 filename: `${publicationName} - ${volumeNumberAndDate}.html`,
                 content: html,
                 contentType: 'text/html',
+              },
+              {
+                filename: `${publicationName} - ${volumeNumberAndDate}.epub`,
+                content: epub,
               },
             ],
           };
