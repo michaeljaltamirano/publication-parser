@@ -1,4 +1,7 @@
 import nodeFetch from 'node-fetch';
+import ebookConverter from 'node-ebook-converter';
+import fs from 'fs';
+import path from 'path';
 
 export async function fetchContent(
   url: string,
@@ -69,3 +72,97 @@ export function handleError(err: Error | unknown) {
 export const isNotNullish = <T>(val: T | null | undefined): val is T => {
   return val !== null && val !== undefined;
 };
+
+interface EpubArgs {
+  publicationName: string;
+  shorthand: string;
+  volumeNumberAndDate: string;
+}
+
+interface EpubArgs {
+  publicationName: string;
+  shorthand: string;
+  volumeNumberAndDate: string;
+}
+
+async function convertHtmlToEpub({
+  publicationName,
+  shorthand,
+  volumeNumberAndDate,
+}: EpubArgs) {
+  await new Promise((resolve, reject) => {
+    ebookConverter
+      .convert({
+        input: `../output/${shorthand}/${publicationName} - ${volumeNumberAndDate}.html`,
+        output: `../output/${shorthand}/${publicationName} - ${volumeNumberAndDate}.epub`,
+      })
+      .then((response) => {
+        console.log(response);
+        resolve(response);
+      })
+      .catch((error) => {
+        console.error(error);
+        reject(error);
+      });
+  });
+}
+
+export async function getEpub({
+  publicationName,
+  shorthand,
+  volumeNumberAndDate,
+}: EpubArgs) {
+  await convertHtmlToEpub({
+    publicationName,
+    shorthand,
+    volumeNumberAndDate,
+  });
+
+  let epub = Buffer.from('');
+
+  const epubPath = path.resolve(
+    __dirname,
+    '..',
+    `output/${shorthand}/${publicationName} - ${volumeNumberAndDate}.epub`,
+  );
+
+  /**
+   * Read epub file
+   */
+  try {
+    epub = fs.readFileSync(epubPath);
+  } catch (e: unknown) {
+    console.error(e);
+  }
+
+  return epub;
+}
+
+interface WriteHtmlFileArgs {
+  html: string;
+  publicationName: string;
+  shorthand: string;
+  volumeNumberAndDate: string;
+}
+
+export const writeHtmlFile = ({
+  html,
+  publicationName,
+  shorthand,
+  volumeNumberAndDate,
+}: WriteHtmlFileArgs) => {
+  const htmlPath = path.join(
+    __dirname,
+    '..',
+    `output/${shorthand}/${publicationName} - ${volumeNumberAndDate}.html`,
+  );
+
+  try {
+    fs.writeFileSync(htmlPath, html);
+  } catch (e: unknown) {
+    console.error(e);
+  }
+};
+
+export const clearNewlinesAndFormatting = (str: string) =>
+  str.replace(/(\r\n|\n|\r)/gm, '').trim();
