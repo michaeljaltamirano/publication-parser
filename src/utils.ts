@@ -59,7 +59,7 @@ export function throwCookieError() {
   );
 }
 
-export function handleError(err: Error | unknown) {
+export function handleError(err: unknown) {
   if (err instanceof Error) {
     console.error(err.message);
   } else {
@@ -99,6 +99,7 @@ async function convertHtmlToEpub({
       .then((response) => {
         console.log(response);
         resolve(response);
+        return response;
       })
       .catch((error) => {
         console.error(error);

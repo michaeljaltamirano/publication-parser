@@ -69,13 +69,13 @@ interface ArticleData {
     bookdetails: string;
     booktitle: string;
     imageurl: boolean;
-    publisherdetails: string | '';
+    publisherdetails: string;
   }[];
   content: string;
   leadimage?: {
-    imagecaption: string | '';
-    imagecredit: string | '';
-    url: string | '';
+    imagecaption: string;
+    imagecredit: string;
+    url: string;
   };
   paywallBanner: {
     loginUrl?: string;

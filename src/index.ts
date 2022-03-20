@@ -22,9 +22,7 @@ const rl = readline.createInterface({
 
 interface GetPublicationInfoReturnType {
   exampleUrl: string;
-  publicationParser: (
-    issueUrl: string,
-  ) => Promise<{
+  publicationParser: (issueUrl: string) => Promise<{
     epub: Buffer;
     html: string;
     publicationName: string;
@@ -128,12 +126,8 @@ rl.question(
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
       async (issueUrl) => {
         try {
-          const {
-            html,
-            epub,
-            volumeNumberAndDate,
-            publicationName,
-          } = await publicationParser(issueUrl);
+          const { html, epub, volumeNumberAndDate, publicationName } =
+            await publicationParser(issueUrl);
 
           const logger = createLogger({
             storagePath: path.join(

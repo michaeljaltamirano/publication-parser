@@ -135,9 +135,10 @@ export default async function bookforumParser(issueUrl: string) {
 
   const dom = new JSDOM(result);
 
-  const articleLinks = dom.window.document.querySelectorAll<HTMLAnchorElement>(
-    '.toc-article__link',
-  );
+  const articleLinks =
+    dom.window.document.querySelectorAll<HTMLAnchorElement>(
+      '.toc-article__link',
+    );
 
   // Clear duplicate links for feature headings
   const hrefs = Array.from(

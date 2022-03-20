@@ -80,21 +80,18 @@ const getFeatureArticleContent = (articleLayoutFeature: Element) => {
 const getSimpleArticleContent = (articleLayoutSimple: Element) => {
   const newArticleLayoutSimple = articleLayoutSimple.cloneNode(true) as Element;
 
-  const simpleLayoutHeader = newArticleLayoutSimple.querySelector(
-    '.article-header',
-  );
+  const simpleLayoutHeader =
+    newArticleLayoutSimple.querySelector('.article-header');
 
   const headerMeta = simpleLayoutHeader?.querySelector('.header-meta');
   // Remove share article text
   headerMeta?.remove();
 
-  const title = simpleLayoutHeader?.querySelector<HTMLHeadingElement>(
-    'h1.title',
-  );
+  const title =
+    simpleLayoutHeader?.querySelector<HTMLHeadingElement>('h1.title');
 
-  const content = newArticleLayoutSimple.querySelectorAll<HTMLElement>(
-    '.wysiwyg-content',
-  );
+  const content =
+    newArticleLayoutSimple.querySelectorAll<HTMLElement>('.wysiwyg-content');
 
   // Remove email signup block
   content.forEach((contentBlock) => {
@@ -150,11 +147,8 @@ const processContent = (articleDom: jsdom.JSDOM, dom: jsdom.JSDOM) => {
   );
 
   if (articleLayoutFeature) {
-    const {
-      featureLayoutHeader,
-      pictureMarkup,
-      content,
-    } = getFeatureArticleContent(articleLayoutFeature);
+    const { featureLayoutHeader, pictureMarkup, content } =
+      getFeatureArticleContent(articleLayoutFeature);
 
     dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article>${featureLayoutHeader}${pictureMarkup}${content}</article>`;
 
@@ -166,11 +160,8 @@ const processContent = (articleDom: jsdom.JSDOM, dom: jsdom.JSDOM) => {
   );
 
   if (articleLayoutSimple) {
-    const {
-      chapterTitle,
-      simpleLayoutHeader,
-      combinedContent,
-    } = getSimpleArticleContent(articleLayoutSimple);
+    const { chapterTitle, simpleLayoutHeader, combinedContent } =
+      getSimpleArticleContent(articleLayoutSimple);
 
     dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article><h2 class="chapter">${chapterTitle}</h2>${simpleLayoutHeader}${combinedContent}</article>`;
 
