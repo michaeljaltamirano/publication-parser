@@ -1,4 +1,3 @@
-import fs from 'fs';
 import jsdom from 'jsdom';
 
 import ENV from '../env';
@@ -9,6 +8,8 @@ import {
   throwCookieError,
   handleError,
   isNotNullish,
+  getEpub,
+  writeHtmlFile,
 } from '../utils';
 
 const { JSDOM } = jsdom;
@@ -45,7 +46,11 @@ const getArticleString = (article: Element) => {
     image.src = `https:${image.src}`;
   });
 
-  return `<div class="article-container">${article.innerHTML}</div>`;
+  const chapter =
+    article.querySelector<HTMLHeadingElement>('h1.blog-article__header')
+      ?.textContent ?? 'No Chapter Title';
+
+  return `<article><h2 class="chapter">${chapter}</h2>${article.innerHTML}</article>`;
 };
 
 async function processHrefs(
@@ -90,19 +95,24 @@ async function processHrefs(
     }
   }
 
-  try {
-    fs.writeFileSync(
-      `output/bookforum/${publicationName} - ${volumeNumberAndDate}.html`,
-      dom.window.document.body.innerHTML,
-    );
-  } catch (e: unknown) {
-    console.error(e);
-  }
+  writeHtmlFile({
+    html: dom.window.document.body.innerHTML,
+    shorthand: 'bookforum',
+    publicationName,
+    volumeNumberAndDate,
+  });
+
+  const epub = await getEpub({
+    publicationName,
+    shorthand: 'bookforum',
+    volumeNumberAndDate,
+  });
 
   console.log('Fetching complete!');
 
   return {
-    html: dom.window.document.body.innerHTML,
+    html: dom.window.document.body.outerHTML,
+    epub,
     volumeNumberAndDate,
     publicationName,
   };

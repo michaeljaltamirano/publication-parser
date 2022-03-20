@@ -1,6 +1,6 @@
-import fs from 'fs';
 import jsdom from 'jsdom';
 import nodeFetch from 'node-fetch';
+
 import ENV from '../env';
 import {
   fetchContent,
@@ -8,6 +8,8 @@ import {
   throwCookieError,
   handleError,
   isNotNullish,
+  getEpub,
+  writeHtmlFile,
 } from '../utils';
 
 const { JSDOM } = jsdom;
@@ -48,9 +50,9 @@ const getIntro = (subject: string, details: ArticleBody) => {
   const { byline, headline, standfirst: subheadline } = details;
 
   return `
-  <h4>${subject}</h4><br>
-  <h2>${headline}</h2><br>
+  <h2 class="chapter">${headline}</h2><br>
   <h3>${subheadline}</h3><br>
+  <h4>${subject}</h4><br>
   ${byline.text ? `<h5>By ${byline.text}</h5><br>` : ''}
 `;
 };
@@ -184,7 +186,7 @@ async function processHrefs(
   options: Record<string, unknown>,
 ) {
   const dom = new JSDOM('<!DOCTYPE html>');
-  dom.window.document.body.outerHTML = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
+  dom.window.document.body.outerHTML = `<h1 class="book">${publicationName}, ${volumeNumberAndDate}</h1>`;
 
   for (const href of hrefs) {
     // Get articles
@@ -264,19 +266,24 @@ async function processHrefs(
     }
   }
 
-  try {
-    fs.writeFileSync(
-      `output/tls/${publicationName} - ${volumeNumberAndDate}.html`,
-      dom.window.document.body.innerHTML,
-    );
-  } catch (e: unknown) {
-    console.error(e);
-  }
+  writeHtmlFile({
+    html: dom.window.document.body.innerHTML,
+    publicationName,
+    shorthand: 'tls',
+    volumeNumberAndDate,
+  });
+
+  const epub = await getEpub({
+    publicationName,
+    shorthand: 'tls',
+    volumeNumberAndDate,
+  });
 
   console.log('Fetching complete!');
 
   return {
     html: dom.window.document.body.outerHTML,
+    epub,
     volumeNumberAndDate,
     publicationName,
   };

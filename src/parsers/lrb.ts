@@ -1,4 +1,3 @@
-import fs from 'fs';
 import jsdom from 'jsdom';
 import ENV from '../env';
 import {
@@ -7,6 +6,8 @@ import {
   throwCookieError,
   handleError,
   isNotNullish,
+  writeHtmlFile,
+  getEpub,
 } from '../utils';
 
 const { JSDOM } = jsdom;
@@ -58,8 +59,8 @@ const processArticle = (
   articleDom: jsdom.JSDOM,
   dom: jsdom.JSDOM,
 ) => {
-  const h1 = articleHeader.firstChild?.textContent ?? '';
-  const h2 = articleHeader.lastChild?.textContent ?? '';
+  const h2 = articleHeader.firstChild?.textContent ?? '';
+  const h3 = articleHeader.lastChild?.textContent ?? '';
   const reviewedItemsHolder = articleDom.window.document.querySelector(
     '.reviewed-items-holder',
   );
@@ -99,7 +100,7 @@ const processArticle = (
 
   const innerHTMLWithArticle = `${
     dom.window.document.body.innerHTML
-  }<div><h1>${h1}</h1><h2>${h2}</h2></div><div>${
+  }<div><h2 class="chapter">${h2}</h2><h3>${h3}</h3></div><div>${
     reviewedItemsContent.innerHTML
   }</div><div>${body?.innerHTML ?? ''}</div><br>End Article<br>`;
 
@@ -177,19 +178,25 @@ async function processHrefs(
     }
   }
 
-  try {
-    fs.writeFileSync(
-      `output/lrb/${publicationName} - ${volumeNumberAndDate}.html`,
-      dom.window.document.body.innerHTML,
-    );
-  } catch (e: unknown) {
-    console.error(e);
-  }
+  writeHtmlFile({
+    html: dom.window.document.body.innerHTML,
+    publicationName,
+
+    shorthand: 'lrb',
+    volumeNumberAndDate,
+  });
+
+  const epub = await getEpub({
+    publicationName,
+    shorthand: 'lrb',
+    volumeNumberAndDate,
+  });
 
   console.log('Fetching complete!');
 
   return {
-    html: dom.window.document.body.innerHTML,
+    html: dom.window.document.body.outerHTML,
+    epub,
     volumeNumberAndDate,
     publicationName,
   };

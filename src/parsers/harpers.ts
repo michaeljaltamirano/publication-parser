@@ -1,4 +1,3 @@
-import fs from 'fs';
 import jsdom from 'jsdom';
 import ENV from '../env';
 import {
@@ -7,6 +6,9 @@ import {
   throwCookieError,
   handleError,
   isNotNullish,
+  writeHtmlFile,
+  getEpub,
+  clearNewlinesAndFormatting,
 } from '../utils';
 
 const { JSDOM } = jsdom;
@@ -86,6 +88,10 @@ const getSimpleArticleContent = (articleLayoutSimple: Element) => {
   // Remove share article text
   headerMeta?.remove();
 
+  const title = simpleLayoutHeader?.querySelector<HTMLHeadingElement>(
+    'h1.title',
+  );
+
   const content = newArticleLayoutSimple.querySelectorAll<HTMLElement>(
     '.wysiwyg-content',
   );
@@ -112,7 +118,10 @@ const getSimpleArticleContent = (articleLayoutSimple: Element) => {
     return acc + additional;
   }, '');
 
+  const chapterTitle = title?.innerHTML ?? 'No Chapter Title';
+
   return {
+    chapterTitle: clearNewlinesAndFormatting(chapterTitle),
     simpleLayoutHeader: simpleLayoutHeader?.outerHTML ?? '',
     combinedContent,
   };
@@ -157,11 +166,13 @@ const processContent = (articleDom: jsdom.JSDOM, dom: jsdom.JSDOM) => {
   );
 
   if (articleLayoutSimple) {
-    const { simpleLayoutHeader, combinedContent } = getSimpleArticleContent(
-      articleLayoutSimple,
-    );
+    const {
+      chapterTitle,
+      simpleLayoutHeader,
+      combinedContent,
+    } = getSimpleArticleContent(articleLayoutSimple);
 
-    dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article>${simpleLayoutHeader}${combinedContent}</article>`;
+    dom.window.document.body.innerHTML = `${dom.window.document.body.innerHTML}<article><h2 class="chapter">${chapterTitle}</h2>${simpleLayoutHeader}${combinedContent}</article>`;
 
     return undefined;
   }
@@ -193,7 +204,9 @@ const processContent = (articleDom: jsdom.JSDOM, dom: jsdom.JSDOM) => {
     return undefined;
   }
 
-  throw new Error('Unresolved path!');
+  console.error('Unresolved path!');
+
+  return undefined;
 };
 
 async function processHrefs(
@@ -202,7 +215,7 @@ async function processHrefs(
   options: ReturnType<typeof getOptions>,
 ) {
   const dom = new JSDOM('<!DOCTYPE html>');
-  dom.window.document.body.innerHTML = `<h1>${publicationName} ${volumeNumberAndDate}</h1>`;
+  dom.window.document.body.innerHTML = `<h1 class="book">${publicationName} ${volumeNumberAndDate}</h1>`;
 
   for (const href of hrefs) {
     // Get articles
@@ -228,19 +241,24 @@ async function processHrefs(
     }
   }
 
-  try {
-    fs.writeFileSync(
-      `output/harpers/${publicationName} - ${volumeNumberAndDate}.html`,
-      dom.window.document.body.innerHTML,
-    );
-  } catch (e: unknown) {
-    console.error(e);
-  }
+  writeHtmlFile({
+    html: dom.window.document.body.innerHTML,
+    publicationName,
+    shorthand: 'harpers',
+    volumeNumberAndDate,
+  });
+
+  const epub = await getEpub({
+    publicationName,
+    shorthand: 'harpers',
+    volumeNumberAndDate,
+  });
 
   console.log('Fetching complete!');
 
   return {
-    html: dom.window.document.body.innerHTML,
+    html: dom.window.document.body.outerHTML,
+    epub,
     volumeNumberAndDate,
     publicationName,
   };
@@ -284,9 +302,17 @@ export default async function harpersParser(issueUrl: string) {
 
   const hrefs = [...readingsHrefs, ...articleHrefs];
 
+  const newRefs = hrefs.filter(
+    (href) => href !== 'https://harpers.org/puzzles/',
+  );
+
   const header = dom.window.document.querySelector('h1');
 
   const volumeNumberAndDate = header?.innerHTML ?? 'UNKNOWN';
 
-  return processHrefs(hrefs, volumeNumberAndDate, options);
+  return processHrefs(
+    newRefs,
+    clearNewlinesAndFormatting(volumeNumberAndDate),
+    options,
+  );
 }

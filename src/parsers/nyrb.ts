@@ -1,4 +1,3 @@
-import fs from 'fs';
 import jsdom from 'jsdom';
 import ENV from '../env';
 import {
@@ -7,6 +6,8 @@ import {
   throwCookieError,
   handleError,
   isNotNullish,
+  writeHtmlFile,
+  getEpub,
 } from '../utils';
 
 const { JSDOM } = jsdom;
@@ -28,11 +29,9 @@ const processContent = (articleDom: jsdom.JSDOM, dom: jsdom.JSDOM) => {
   const author = header.querySelector<HTMLElement>('div.author');
   const dek = header.querySelector<HTMLElement>('div.dek:not(.author)');
 
-  const titleAndAuthorMarkup = `<heading>${
-    title?.outerHTML ?? ''
-  }</heading><h2>${author?.textContent ?? ''}</h2><h3>${
-    dek?.outerHTML ?? ''
-  }</h3>`;
+  const titleAndAuthorMarkup = `<h2 class="chapter">${
+    title?.innerHTML ?? ''
+  }</h2><h3>${author?.textContent ?? ''}</h3><h3>${dek?.outerHTML ?? ''}</h3>`;
 
   const article = articleDom.window.document.querySelector<HTMLElement>(
     'article.article',
@@ -96,7 +95,7 @@ async function processHrefs(
   options: Record<string, unknown>,
 ) {
   const dom = new JSDOM('<!DOCTYPE html>');
-  dom.window.document.body.innerHTML = `<h1>${publicationName}, ${volumeNumberAndDate}</h1>`;
+  dom.window.document.body.innerHTML = `<h1 class="book">${publicationName}, ${volumeNumberAndDate}</h1>`;
 
   for (const href of hrefs) {
     // Get articles
@@ -121,19 +120,24 @@ async function processHrefs(
     }
   }
 
-  try {
-    fs.writeFileSync(
-      `output/nyrb/${publicationName} - ${volumeNumberAndDate}.html`,
-      dom.window.document.body.innerHTML,
-    );
-  } catch (e: unknown) {
-    console.error(e);
-  }
+  writeHtmlFile({
+    html: dom.window.document.body.innerHTML,
+    publicationName,
+    shorthand: 'nyrb',
+    volumeNumberAndDate,
+  });
+
+  const epub = await getEpub({
+    publicationName,
+    shorthand: 'nyrb',
+    volumeNumberAndDate,
+  });
 
   console.log('Fetching complete!');
 
   return {
-    html: dom.window.document.body.innerHTML,
+    html: dom.window.document.body.outerHTML,
+    epub,
     volumeNumberAndDate,
     publicationName,
   };
