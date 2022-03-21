@@ -1,20 +1,14 @@
+import nodeFetch from 'node-fetch';
 import ebookConverter from 'node-ebook-converter';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
-export async function lazyImportNodeFetch() {
-  const nodeFetch = await import('node-fetch');
-
-  return nodeFetch.default;
-}
 
 export async function fetchContent(
   url: string,
   options: Record<string, unknown>,
 ): Promise<string | undefined> {
   try {
-    const nodeFetch = await lazyImportNodeFetch();
     const res = await nodeFetch(url, options);
     return await res.text();
   } catch (e: unknown) {
@@ -28,7 +22,6 @@ export async function fetchContentArrayBuffer(
   options: Record<string, unknown>,
 ) {
   try {
-    const nodeFetch = await lazyImportNodeFetch();
     const res = await nodeFetch(url, options);
     const ab = await res.arrayBuffer();
     const dataView = new DataView(ab);
