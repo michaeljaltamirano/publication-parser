@@ -1,3 +1,14 @@
+# 0.14.0
+
+- [BREAKING] Use `esm` instead of `commonjs` [(#395)](https://github.com/michaeljaltamirano/publication-parser/pull/395)
+- Add `epub` functionality [(#377)](https://github.com/michaeljaltamirano/publication-parser/pull/377)
+- Linting changes [(#163)](https://github.com/michaeljaltamirano/publication-parser/pull/163) [(#165)](https://github.com/michaeljaltamirano/publication-parser/pull/165) [(#166)](https://github.com/michaeljaltamirano/publication-parser/pull/166)
+- Update Harper's parser [(#77)](https://github.com/michaeljaltamirano/publication-parser/pull/77)
+
+# 0.13.0
+
+No release, whoops
+
 # 0.12.2
 
 - [Bugfix] Use hexidecimal escape instead of octal escape [(#5)](https://github.com/michaeljaltamirano/publication-parser/pull/5)
