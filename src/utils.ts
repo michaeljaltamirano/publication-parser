@@ -100,12 +100,8 @@ async function convertHtmlToEpub({
 }: EpubArgs) {
   await new Promise((resolve, reject) => {
     const pathWithoutExtension = `output/${shorthand}/${publicationName} - ${volumeNumberAndDate}`;
-
     const input = path.resolve(`${pathWithoutExtension}.html`);
     const output = path.resolve(`${pathWithoutExtension}.epub`);
-
-    console.log('input', input);
-    console.log('what is output', output);
 
     ebookConverter
       .convert({
@@ -118,7 +114,6 @@ async function convertHtmlToEpub({
         return response;
       })
       .catch((error) => {
-        console.log('html catch');
         console.error(error);
         reject(error);
       });
@@ -146,25 +141,6 @@ export async function getEpub({
     getDirname(),
     '..',
     `output/${shorthand}/${publicationName} - ${volumeNumberAndDate}.epub`,
-  );
-
-  console.log('epubPath', epubPath);
-
-  console.log('trying different setups');
-
-  console.log(
-    path.resolve(
-      getDirname(),
-      '..',
-      `output/${shorthand}/${publicationName} - ${volumeNumberAndDate}.epub`,
-    ),
-  );
-
-  console.log(
-    path.resolve(
-      getDirname(),
-      `output/${shorthand}/${publicationName} - ${volumeNumberAndDate}.epub`,
-    ),
   );
 
   /**
@@ -198,13 +174,10 @@ export const writeHtmlFile = ({
     `output/${shorthand}/${publicationName} - ${volumeNumberAndDate}.html`,
   );
 
-  console.log('what is htmlPath', htmlPath);
-
   try {
     fs.writeFileSync(htmlPath, html);
   } catch (e: unknown) {
-    console.log('in catch', e);
-    console.error(e);
+    console.error('inHtmlCatch', e);
   }
 };
 
