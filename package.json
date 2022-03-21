@@ -4,7 +4,6 @@
   "description": "Parses the written content of various publications",
   "main": "lib/index.js",
   "type": "module",
-  "exports": "./lib/index.js",
   "scripts": {
     "prettier": "prettier",
     "eslint": "eslint",
