@@ -1,13 +1,20 @@
-import nodeFetch from 'node-fetch';
 import ebookConverter from 'node-ebook-converter';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+export async function lazyImportNodeFetch() {
+  const nodeFetch = await import('node-fetch');
+
+  return nodeFetch.default;
+}
 
 export async function fetchContent(
   url: string,
   options: Record<string, unknown>,
 ): Promise<string | undefined> {
   try {
+    const nodeFetch = await lazyImportNodeFetch();
     const res = await nodeFetch(url, options);
     return await res.text();
   } catch (e: unknown) {
@@ -21,6 +28,7 @@ export async function fetchContentArrayBuffer(
   options: Record<string, unknown>,
 ) {
   try {
+    const nodeFetch = await lazyImportNodeFetch();
     const res = await nodeFetch(url, options);
     const ab = await res.arrayBuffer();
     const dataView = new DataView(ab);
@@ -91,10 +99,18 @@ async function convertHtmlToEpub({
   volumeNumberAndDate,
 }: EpubArgs) {
   await new Promise((resolve, reject) => {
+    const pathWithoutExtension = `output/${shorthand}/${publicationName} - ${volumeNumberAndDate}`;
+
+    const input = path.resolve(`${pathWithoutExtension}.html`);
+    const output = path.resolve(`${pathWithoutExtension}.epub`);
+
+    console.log('input', input);
+    console.log('what is output', output);
+
     ebookConverter
       .convert({
-        input: `../output/${shorthand}/${publicationName} - ${volumeNumberAndDate}.html`,
-        output: `../output/${shorthand}/${publicationName} - ${volumeNumberAndDate}.epub`,
+        input,
+        output,
       })
       .then((response) => {
         console.log(response);
@@ -102,10 +118,15 @@ async function convertHtmlToEpub({
         return response;
       })
       .catch((error) => {
+        console.log('html catch');
         console.error(error);
         reject(error);
       });
   });
+}
+
+export function getDirname() {
+  return path.dirname(fileURLToPath(import.meta.url));
 }
 
 export async function getEpub({
@@ -122,9 +143,28 @@ export async function getEpub({
   let epub = Buffer.from('');
 
   const epubPath = path.resolve(
-    __dirname,
+    getDirname(),
     '..',
     `output/${shorthand}/${publicationName} - ${volumeNumberAndDate}.epub`,
+  );
+
+  console.log('epubPath', epubPath);
+
+  console.log('trying different setups');
+
+  console.log(
+    path.resolve(
+      getDirname(),
+      '..',
+      `output/${shorthand}/${publicationName} - ${volumeNumberAndDate}.epub`,
+    ),
+  );
+
+  console.log(
+    path.resolve(
+      getDirname(),
+      `output/${shorthand}/${publicationName} - ${volumeNumberAndDate}.epub`,
+    ),
   );
 
   /**
@@ -153,14 +193,17 @@ export const writeHtmlFile = ({
   volumeNumberAndDate,
 }: WriteHtmlFileArgs) => {
   const htmlPath = path.join(
-    __dirname,
+    getDirname(),
     '..',
     `output/${shorthand}/${publicationName} - ${volumeNumberAndDate}.html`,
   );
 
+  console.log('what is htmlPath', htmlPath);
+
   try {
     fs.writeFileSync(htmlPath, html);
   } catch (e: unknown) {
+    console.log('in catch', e);
     console.error(e);
   }
 };

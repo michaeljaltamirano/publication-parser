@@ -1,6 +1,6 @@
 import jsdom from 'jsdom';
 
-import ENV from '../env';
+import ENV from '../env.js';
 import {
   fetchContent,
   fetchContentArrayBuffer,
@@ -10,7 +10,7 @@ import {
   isNotNullish,
   getEpub,
   writeHtmlFile,
-} from '../utils';
+} from '../utils.js';
 
 const { JSDOM } = jsdom;
 

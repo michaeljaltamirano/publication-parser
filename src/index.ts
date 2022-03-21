@@ -4,12 +4,13 @@ import nodemailer from 'nodemailer';
 import createLogger from 'progress-estimator';
 import type SESTransport from 'nodemailer/lib/ses-transport';
 
-import harpersParser from './parsers/harpers';
-import lrbParser from './parsers/lrb';
-import nyrbParser from './parsers/nyrb';
-import bookforumParser from './parsers/bookforum';
-import ENV from './env';
-import tlsParser from './parsers/tls';
+import harpersParser from './parsers/harpers.js';
+import lrbParser from './parsers/lrb.js';
+import nyrbParser from './parsers/nyrb.js';
+import bookforumParser from './parsers/bookforum.js';
+import ENV from './env.js';
+import tlsParser from './parsers/tls.js';
+import { getDirname } from './utils.js';
 
 const {
   email: { recipient, sender, twoFactorPassword },
@@ -131,7 +132,7 @@ rl.question(
 
           const logger = createLogger({
             storagePath: path.join(
-              __dirname,
+              getDirname(),
               `../.progress-estimator/${shorthand}`,
             ),
           });

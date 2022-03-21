@@ -1,7 +1,6 @@
 import jsdom from 'jsdom';
-import nodeFetch from 'node-fetch';
 
-import ENV from '../env';
+import ENV from '../env.js';
 import {
   fetchContent,
   getOptions,
@@ -10,7 +9,8 @@ import {
   isNotNullish,
   getEpub,
   writeHtmlFile,
-} from '../utils';
+  lazyImportNodeFetch,
+} from '../utils.js';
 
 const { JSDOM } = jsdom;
 
@@ -87,6 +87,7 @@ interface ArticleData {
 }
 
 async function getArticleData(postId: string) {
+  const nodeFetch = await lazyImportNodeFetch();
   const articleData = await nodeFetch(
     `https://www.the-tls.co.uk/wp-json/tls/v2/single-article/${postId.replace(
       /\D/g,
@@ -325,6 +326,8 @@ export default async function tlsParser(issueUrl: string) {
   const postId = classList.find((className) => className.includes('postid'));
 
   if (!isNotNullish(postId)) throw new Error('no postid found');
+
+  const nodeFetch = await lazyImportNodeFetch();
 
   const rawIssueData = await nodeFetch(
     `https://www.the-tls.co.uk/wp-json/tls/v2/contents-page/${postId.replace(
