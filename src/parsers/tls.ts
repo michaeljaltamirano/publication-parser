@@ -1,7 +1,7 @@
 import jsdom from 'jsdom';
 import nodeFetch from 'node-fetch';
 
-import ENV from '../env';
+import ENV from '../env.js';
 import {
   fetchContent,
   getOptions,
@@ -10,7 +10,7 @@ import {
   isNotNullish,
   getEpub,
   writeHtmlFile,
-} from '../utils';
+} from '../utils.js';
 
 const { JSDOM } = jsdom;
 
@@ -69,13 +69,13 @@ interface ArticleData {
     bookdetails: string;
     booktitle: string;
     imageurl: boolean;
-    publisherdetails: string | '';
+    publisherdetails: string;
   }[];
   content: string;
   leadimage?: {
-    imagecaption: string | '';
-    imagecredit: string | '';
-    url: string | '';
+    imagecaption: string;
+    imagecredit: string;
+    url: string;
   };
   paywallBanner: {
     loginUrl?: string;

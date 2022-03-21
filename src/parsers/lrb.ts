@@ -1,5 +1,5 @@
 import jsdom from 'jsdom';
-import ENV from '../env';
+import ENV from '../env.js';
 import {
   fetchContent,
   getOptions,
@@ -8,7 +8,7 @@ import {
   isNotNullish,
   writeHtmlFile,
   getEpub,
-} from '../utils';
+} from '../utils.js';
 
 const { JSDOM } = jsdom;
 
@@ -36,7 +36,8 @@ const getReviewedItemsContent = (
     });
 
   // Clean info
-  const reviewedItemsChildNodes = newReviewedItems.childNodes as NodeListOf<HTMLElement>;
+  const reviewedItemsChildNodes =
+    newReviewedItems.childNodes as NodeListOf<HTMLElement>;
 
   reviewedItemsChildNodes.forEach((review) => {
     const by = review.querySelector('.by');
@@ -70,9 +71,8 @@ const processArticle = (
   };
 
   if (reviewedItemsHolder) {
-    const reviewedItems = articleDom.window.document.querySelector(
-      '.reviewed-items',
-    );
+    const reviewedItems =
+      articleDom.window.document.querySelector('.reviewed-items');
 
     if (reviewedItems) {
       reviewedItemsContent = getReviewedItemsContent(
@@ -114,11 +114,11 @@ const processContent = (articleDom: jsdom.JSDOM, dom: jsdom.JSDOM) => {
   );
 
   if (lettersHeader) {
-    const letters = articleDom.window.document.getElementById(
-      'lrb-lettersCopy',
-    );
+    const letters =
+      articleDom.window.document.getElementById('lrb-lettersCopy');
 
-    const lettersHeaderFirstChild = lettersHeader.firstChild as HTMLElement | null;
+    const lettersHeaderFirstChild =
+      lettersHeader.firstChild as HTMLElement | null;
 
     dom.window.document.body.innerHTML = `${
       dom.window.document.body.innerHTML
@@ -166,9 +166,8 @@ async function processHrefs(
       const articleDom = generateNewJSDOM();
       articleDom.window.document.body.innerHTML = result;
 
-      const isPaywalled = !!articleDom.window.document.getElementById(
-        'lrb-pw-block',
-      );
+      const isPaywalled =
+        !!articleDom.window.document.getElementById('lrb-pw-block');
 
       if (isPaywalled) throwCookieError();
 
@@ -237,9 +236,8 @@ export default async function lrbParser(issueUrl: string) {
     secondDateSplit[FIRST_SPLIT_INDEX] ?? ''
   }</div>`;
 
-  const dateAndVolume = dateDom.window.document.getElementById(
-    'date-and-volume',
-  );
+  const dateAndVolume =
+    dateDom.window.document.getElementById('date-and-volume');
 
   const volumeNumberAndDate =
     dateAndVolume?.firstChild?.textContent ?? new Date().toLocaleDateString();

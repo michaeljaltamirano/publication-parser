@@ -1,5 +1,5 @@
 import jsdom from 'jsdom';
-import ENV from '../env';
+import ENV from '../env.js';
 import {
   fetchContent,
   getOptions,
@@ -8,7 +8,7 @@ import {
   isNotNullish,
   writeHtmlFile,
   getEpub,
-} from '../utils';
+} from '../utils.js';
 
 const { JSDOM } = jsdom;
 
@@ -33,9 +33,8 @@ const processContent = (articleDom: jsdom.JSDOM, dom: jsdom.JSDOM) => {
     title?.innerHTML ?? ''
   }</h2><h3>${author?.textContent ?? ''}</h3><h3>${dek?.outerHTML ?? ''}</h3>`;
 
-  const article = articleDom.window.document.querySelector<HTMLElement>(
-    'article.article',
-  );
+  const article =
+    articleDom.window.document.querySelector<HTMLElement>('article.article');
 
   if (!article) {
     throw new Error('article parse error');
@@ -158,9 +157,10 @@ export default async function nyrbParser(issueUrl: string) {
   }
 
   const dom = new JSDOM(result);
-  const tableOfContentsLinks = dom.window.document.querySelectorAll<HTMLAnchorElement>(
-    'a[href*="nybooks.com/articles"]',
-  );
+  const tableOfContentsLinks =
+    dom.window.document.querySelectorAll<HTMLAnchorElement>(
+      'a[href*="nybooks.com/articles"]',
+    );
   const hrefs = Array.from(tableOfContentsLinks).map((link) => link.href);
 
   const date = dom.window.document.querySelector<HTMLElement>(

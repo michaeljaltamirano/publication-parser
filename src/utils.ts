@@ -2,6 +2,7 @@ import nodeFetch from 'node-fetch';
 import ebookConverter from 'node-ebook-converter';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 export async function fetchContent(
   url: string,
@@ -59,7 +60,7 @@ export function throwCookieError() {
   );
 }
 
-export function handleError(err: Error | unknown) {
+export function handleError(err: unknown) {
   if (err instanceof Error) {
     console.error(err.message);
   } else {
@@ -91,20 +92,29 @@ async function convertHtmlToEpub({
   volumeNumberAndDate,
 }: EpubArgs) {
   await new Promise((resolve, reject) => {
+    const pathWithoutExtension = `output/${shorthand}/${publicationName} - ${volumeNumberAndDate}`;
+    const input = path.resolve(`${pathWithoutExtension}.html`);
+    const output = path.resolve(`${pathWithoutExtension}.epub`);
+
     ebookConverter
       .convert({
-        input: `../output/${shorthand}/${publicationName} - ${volumeNumberAndDate}.html`,
-        output: `../output/${shorthand}/${publicationName} - ${volumeNumberAndDate}.epub`,
+        input,
+        output,
       })
       .then((response) => {
         console.log(response);
         resolve(response);
+        return response;
       })
       .catch((error) => {
         console.error(error);
         reject(error);
       });
   });
+}
+
+export function getDirname() {
+  return path.dirname(fileURLToPath(import.meta.url));
 }
 
 export async function getEpub({
@@ -121,7 +131,7 @@ export async function getEpub({
   let epub = Buffer.from('');
 
   const epubPath = path.resolve(
-    __dirname,
+    getDirname(),
     '..',
     `output/${shorthand}/${publicationName} - ${volumeNumberAndDate}.epub`,
   );
@@ -152,7 +162,7 @@ export const writeHtmlFile = ({
   volumeNumberAndDate,
 }: WriteHtmlFileArgs) => {
   const htmlPath = path.join(
-    __dirname,
+    getDirname(),
     '..',
     `output/${shorthand}/${publicationName} - ${volumeNumberAndDate}.html`,
   );
@@ -160,7 +170,7 @@ export const writeHtmlFile = ({
   try {
     fs.writeFileSync(htmlPath, html);
   } catch (e: unknown) {
-    console.error(e);
+    console.error('inHtmlCatch', e);
   }
 };
 
