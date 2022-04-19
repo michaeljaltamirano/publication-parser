@@ -22,7 +22,7 @@
     "@types/node-fetch": "^2.6.1",
     "@types/nodemailer": "^6.4.4",
     "@typescript-eslint/eslint-plugin": "^5.15.0",
-    "@typescript-eslint/parser": "^5.15.0",
+    "@typescript-eslint/parser": "^5.20.0",
     "jsdom": "^19.0.0",
     "node-ebook-converter": "https://github.com/michaeljaltamirano/node-ebook-converter.git#2d35b050e667ab13280b7e2cfb458ed1310121d8",
     "node-fetch": "^3.2.3",
